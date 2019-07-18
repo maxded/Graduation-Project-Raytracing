@@ -1,0 +1,8 @@
+*.db
+*.opendb
+GPE/Intermediate/
+GPE/Executable/
+*.sdf
+*.user
+.vs/
+
