@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.2000
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29201.188
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GPE", "GPE\GPE.vcxproj", "{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HybridRayTracing", "HybridRayTracing\HybridRayTracing.vcxproj", "{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F481DBD2-6580-492B-B2F8-309AC54E5693} = {F481DBD2-6580-492B-B2F8-309AC54E5693}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Framework", "Framework\Framework.vcxproj", "{F481DBD2-6580-492B-B2F8-309AC54E5693}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,8 +18,16 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}.Debug|x64.ActiveCfg = Debug|x64
 		{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}.Debug|x64.Build.0 = Debug|x64
+		{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}.Debug|x86.ActiveCfg = Debug|x64
 		{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}.Release|x64.ActiveCfg = Release|x64
 		{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}.Release|x64.Build.0 = Release|x64
+		{3D26B789-49E4-4D2C-A51E-4F6BA12E07DF}.Release|x86.ActiveCfg = Release|x64
+		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Debug|x64.ActiveCfg = Debug|x64
+		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Debug|x64.Build.0 = Debug|x64
+		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Debug|x86.ActiveCfg = Debug|x64
+		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Release|x64.ActiveCfg = Release|x64
+		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Release|x64.Build.0 = Release|x64
+		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

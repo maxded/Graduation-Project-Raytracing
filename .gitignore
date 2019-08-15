@@ -1,7 +1,9 @@
 *.db
 *.opendb
-GPE/Intermediate/
-GPE/Executable/
+FrameWork/Intermediate/
+FrameWork/Library
+HybridRayTracing/Intermediate/
+HybridRayTracing/Executable/
 *.sdf
 *.user
 .vs/
