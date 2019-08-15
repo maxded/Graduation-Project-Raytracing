@@ -68,7 +68,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\Game.cpp" />
+    <ClCompile Include="Source\HybridRayTracingDemo.cpp" />
     <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\UploadBuffer.cpp" />
+    <ClCompile Include="Source\Utility\HighResolutionClock.cpp" />
+    <ClCompile Include="Source\Window.cpp" />
+    <ClCompile Include="Source\Wrappers\CommandQueue.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\Application.h" />
+    <ClInclude Include="Include\Game.h" />
+    <ClInclude Include="Include\HybridRayTracingDemo.h" />
+    <ClInclude Include="Include\UploadBuffer.h" />
+    <ClInclude Include="Include\Utility\Defines.h" />
+    <ClInclude Include="Include\Utility\Events.h" />
+    <ClInclude Include="Include\Utility\Helpers.h" />
+    <ClInclude Include="Include\Utility\HighResolutionClock.h" />
+    <ClInclude Include="Include\Utility\KeyCodes.h" />
+    <ClInclude Include="Include\Window.h" />
+    <ClInclude Include="Include\Wrappers\CommandQueue.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
