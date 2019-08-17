@@ -1,9 +1,8 @@
-#include <CommandQueue.h>
-#include <Helpers.h>
+#include <FrameworkPCH.h>
 
+#include <CommandQueue.h>
 #include <Application.h>
 
-#include <cassert>
 
 CommandQueue::CommandQueue(D3D12_COMMAND_LIST_TYPE type)
     : m_FenceValue(0)

@@ -9,7 +9,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(SolutionDir)Framework/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Framework/Include;$(SolutionDir)Framework/Include/Utility;$(SolutionDir)Framework/Include/External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <link>    
       <AdditionalLibraryDirectories>$(SolutionDir)Framework\Library\$(Platform)\$(Configuration);%DXSDK_DIR%\Lib%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 

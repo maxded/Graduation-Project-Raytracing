@@ -1,3 +1,5 @@
+#include <FrameworkPCH.h>
+
 #include <HighResolutionClock.h>
 
 HighResolutionClock::HighResolutionClock()

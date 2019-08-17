@@ -1,10 +1,9 @@
+#include <FrameworkPCH.h>
+
 #include <Application.h>
 #include <Window.h>
 #include <Game.h>
-#include <Helpers.h>
 #include <CommandQueue.h>
-
-#include <cassert>
 
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"Graphics Practise Environment";
 

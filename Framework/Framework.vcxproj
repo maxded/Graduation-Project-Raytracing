@@ -36,7 +36,7 @@
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Platform)'=='x64'">
-    <Import Project = "PropertySheets\FrameworkPropertySheet.props" />
+    <Import Project="PropertySheets\FrameworkPropertySheet.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -52,6 +52,8 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Create</PrecompiledHeader>
+      <PrecompiledHeaderFile>FrameworkPCH.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -75,22 +77,40 @@
   <ItemGroup>
     <ClInclude Include="Include\Application.h" />
     <ClInclude Include="Include\CommandQueue.h" />
-    <ClInclude Include="Include\d3dx12.h" />
-    <ClInclude Include="Include\Defines.h" />
-    <ClInclude Include="Include\Events.h" />
+    <ClInclude Include="Include\D3D12Resources\Buffer.h" />
+    <ClInclude Include="Include\D3D12Resources\ConstantBuffer.h" />
+    <ClInclude Include="Include\D3D12Resources\IndexBuffer.h" />
+    <ClInclude Include="Include\D3D12Resources\Resource.h" />
+    <ClInclude Include="Include\D3D12Resources\StructuredBuffer.h" />
+    <ClInclude Include="Include\D3D12Resources\Texture.h" />
+    <ClInclude Include="Include\D3D12Resources\VertexBuffer.h" />
+    <ClInclude Include="Include\External\d3dx12.h" />
+    <ClInclude Include="Include\FrameworkPCH.h" />
     <ClInclude Include="Include\Game.h" />
-    <ClInclude Include="Include\Helpers.h" />
-    <ClInclude Include="Include\HighResolutionClock.h" />
-    <ClInclude Include="Include\KeyCodes.h" />
+    <ClInclude Include="Include\Mesh.h" />
     <ClInclude Include="Include\UploadBuffer.h" />
+    <ClInclude Include="Include\Utility\Defines.h" />
+    <ClInclude Include="Include\Utility\Events.h" />
+    <ClInclude Include="Include\Utility\FrameworkPCH.h" />
+    <ClInclude Include="Include\Utility\Helpers.h" />
+    <ClInclude Include="Include\Utility\HighResolutionClock.h" />
+    <ClInclude Include="Include\Utility\KeyCodes.h" />
     <ClInclude Include="Include\Window.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application.cpp" />
     <ClCompile Include="Source\CommandQueue.cpp" />
+    <ClCompile Include="Source\D3D12Resources\Buffer.cpp" />
+    <ClCompile Include="Source\D3D12Resources\ConstantBuffer.cpp" />
+    <ClCompile Include="Source\D3D12Resources\IndexBuffer.cpp" />
+    <ClCompile Include="Source\D3D12Resources\Resource.cpp" />
+    <ClCompile Include="Source\D3D12Resources\StructuredBuffer.cpp" />
+    <ClCompile Include="Source\D3D12Resources\Texture.cpp" />
+    <ClCompile Include="Source\D3D12Resources\VertexBuffer.cpp" />
     <ClCompile Include="Source\Game.cpp" />
-    <ClCompile Include="Source\HighResolutionClock.cpp" />
+    <ClCompile Include="Source\Mesh.cpp" />
     <ClCompile Include="Source\UploadBuffer.cpp" />
+    <ClCompile Include="Source\Utility\HighResolutionClock.cpp" />
     <ClCompile Include="Source\Window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

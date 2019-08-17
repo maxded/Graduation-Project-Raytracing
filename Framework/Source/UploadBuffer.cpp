@@ -1,9 +1,7 @@
+#include <FrameworkPCH.h>
+
 #include <UploadBuffer.h>
 #include <Application.h>
-
-#include <Helpers.h>
-
-#include <d3dx12.h>
 
 UploadBuffer::UploadBuffer(size_t pageSize)
 	: m_PageSize(pageSize)

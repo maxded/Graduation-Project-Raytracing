@@ -1,8 +1,8 @@
+#include <FrameworkPCH.h>
+
 #include <Game.h>
 #include <Application.h>
 #include <Window.h>
-
-#include <DirectXMath.h>
 
 Game::Game(const std::wstring& name, uint16_t width, uint16_t height, bool vSync)
 	: m_Name(name)

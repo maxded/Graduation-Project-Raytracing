@@ -1,13 +1,9 @@
+#include <FrameworkPCH.h>
+
 #include <Window.h>
 #include <Application.h>
 #include <Game.h>
-#include <Helpers.h>
 #include <CommandQueue.h>
-
-#include <d3dx12.h>
-
-#include <algorithm>
-#include <cassert>
 
 Window::Window(HWND hWnd, const std::wstring& windowname, uint16_t clientWidth, uint16_t clientHeight, bool vSync)
 	: m_hWnd(hWnd)
