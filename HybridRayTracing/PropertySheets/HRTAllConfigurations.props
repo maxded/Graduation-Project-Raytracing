@@ -14,7 +14,7 @@
     </ClCompile>
     <link>    
       <AdditionalLibraryDirectories>$(SolutionDir)Framework\Library\$(Platform)\$(Configuration);%DXSDK_DIR%\Lib%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;Framework.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>    
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;Framework.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>    
     </link>
   </ItemDefinitionGroup>
   <ItemGroup />
