@@ -5,7 +5,7 @@
 class IndexBuffer : public Buffer
 {
 public:
-	IndexBuffer(const std::wstring& name = L"");
+	IndexBuffer(const std::wstring& name = L"IndexBuffer");
 	virtual ~IndexBuffer();
 
 	// Inherited from Buffer

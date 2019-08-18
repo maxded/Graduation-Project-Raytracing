@@ -5,7 +5,7 @@
 class VertexBuffer : public Buffer
 {
 public:
-	VertexBuffer(const std::wstring& name = L"");
+	VertexBuffer(const std::wstring& name = L"VertexBuffer");
 	virtual ~VertexBuffer();
 
 	virtual void CreateViews(size_t numElements, size_t elementSize) override;

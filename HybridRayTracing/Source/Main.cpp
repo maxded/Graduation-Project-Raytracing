@@ -1,6 +1,5 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-#include <Shlwapi.h>
 
 #include <Application.h>
 #include <HybridRayTracingDemo.h>
@@ -22,7 +21,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	Application::Create(hInstance);
 	{
-		std::shared_ptr<HybridRayTracingDemo> game = std::make_shared<HybridRayTracingDemo>(L"Hybrid Ray Tracing Demo", 1280, 720, true);
+		std::shared_ptr<HybridRayTracingDemo> game = std::make_shared<HybridRayTracingDemo>(L"Hybrid Ray Tracing Demo", 1280, 720);
 		retCode = Application::Get().Run(game);
 	}
 	Application::Destroy();

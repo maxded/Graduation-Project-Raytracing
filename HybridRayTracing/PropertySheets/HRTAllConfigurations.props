@@ -9,11 +9,12 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(SolutionDir)Framework/Include;$(SolutionDir)Framework/Include/Utility;$(SolutionDir)Framework/Include/External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Framework/Include;$(SolutionDir)Framework/Include/Utility;$(SolutionDir)Framework/Include/External;$(SolutionDir)Framework/Include/D3D12Resources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_ENABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <link>    
       <AdditionalLibraryDirectories>$(SolutionDir)Framework\Library\$(Platform)\$(Configuration);%DXSDK_DIR%\Lib%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;Framework.lib;%(AdditionalDependencies)</AdditionalDependencies>    
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;Framework.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>    
     </link>
   </ItemDefinitionGroup>
   <ItemGroup />
