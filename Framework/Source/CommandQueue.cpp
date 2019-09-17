@@ -63,20 +63,20 @@ Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandQueue::CreateCommandAlloca
     return commandAllocator;
 }
 
-Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> CommandQueue::CreateCommandList(Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator)
+Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> CommandQueue::CreateCommandList(Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator)
 {
     auto device = Application::Get().GetDevice();
 
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList;
     ThrowIfFailed(device->CreateCommandList(0, m_CommandListType, allocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
 
     return commandList;
 }
 
-Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> CommandQueue::GetCommandList()
+Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> CommandQueue::GetCommandList()
 {
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList;
 
     if ( !m_CommandAllocatorQueue.empty() && IsFenceComplete(m_CommandAllocatorQueue.front().fenceValue))
     {
@@ -111,7 +111,7 @@ Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> CommandQueue::GetCommandList(
 
 // Execute a command list.
 // Returns the fence value to wait for for this command list.
-uint64_t CommandQueue::ExecuteCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList)
+uint64_t CommandQueue::ExecuteCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList)
 {
     commandList->Close();
 

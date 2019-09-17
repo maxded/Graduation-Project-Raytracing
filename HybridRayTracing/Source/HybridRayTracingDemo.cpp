@@ -1,10 +1,11 @@
 #include <HybridRayTracingDemo.h>
 #include <Application.h>
 #include <Window.h>
+#include <ctime>
 
 #include <CommandQueue.h>
 #include <Helpers.h>
-#include <Mesh.h>
+#include <StaticMesh.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -22,16 +23,17 @@ HybridRayTracingDemo::HybridRayTracingDemo(const std::wstring& name, int width, 
 	, m_ViewMatrix(XMMATRIX())
 	, m_ProjectionMatrix(XMMATRIX())
 {
+
 }
 
 bool HybridRayTracingDemo::LoadContent()
 {
 	auto device			= Application::Get().GetDevice();
-	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList	= commandQueue->GetCommandList();
 
 	// Create the cube mesh
-	m_CubeMesh = Mesh::CreateCube(*commandList.Get());
+	m_CubeMesh = StaticMesh::CreateCube(*commandList.Get());
 
 	// Create the descriptor heap for the depth-stencil view.
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
@@ -259,7 +261,7 @@ void HybridRayTracingDemo::OnResize(ResizeEventArgs& e)
 
 // Transition a resource
 void HybridRayTracingDemo::TransitionResource(
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
 	Microsoft::WRL::ComPtr<ID3D12Resource> resource,
 	D3D12_RESOURCE_STATES beforeState, 
 	D3D12_RESOURCE_STATES afterState)
@@ -273,14 +275,14 @@ void HybridRayTracingDemo::TransitionResource(
 
 // Clear a render target.
 void HybridRayTracingDemo::ClearRTV(
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor)
 {
 	commandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 }
 
 void HybridRayTracingDemo::ClearDepth(
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth)
 {
 	commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);

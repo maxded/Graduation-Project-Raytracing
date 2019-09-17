@@ -85,9 +85,8 @@
     <ClInclude Include="Include\D3D12Resources\Texture.h" />
     <ClInclude Include="Include\D3D12Resources\VertexBuffer.h" />
     <ClInclude Include="Include\External\d3dx12.h" />
-    <ClInclude Include="Include\FrameworkPCH.h" />
     <ClInclude Include="Include\Game.h" />
-    <ClInclude Include="Include\Mesh.h" />
+    <ClInclude Include="Include\StaticMesh.h" />
     <ClInclude Include="Include\UploadBuffer.h" />
     <ClInclude Include="Include\Utility\Defines.h" />
     <ClInclude Include="Include\Utility\Events.h" />
@@ -108,7 +107,7 @@
     <ClCompile Include="Source\D3D12Resources\Texture.cpp" />
     <ClCompile Include="Source\D3D12Resources\VertexBuffer.cpp" />
     <ClCompile Include="Source\Game.cpp" />
-    <ClCompile Include="Source\Mesh.cpp" />
+    <ClCompile Include="Source\StaticMesh.cpp" />
     <ClCompile Include="Source\UploadBuffer.cpp" />
     <ClCompile Include="Source\Utility\HighResolutionClock.cpp" />
     <ClCompile Include="Source\Window.cpp" />

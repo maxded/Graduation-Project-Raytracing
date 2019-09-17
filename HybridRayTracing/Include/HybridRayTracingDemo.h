@@ -1,10 +1,11 @@
 #pragma once
 #include <Game.h>
 #include <Window.h>
+#include <memory>
 
 #include <DirectXMath.h>
 
-class Mesh;
+class StaticMesh;
 
 class HybridRayTracingDemo : public Game
 {
@@ -42,16 +43,16 @@ protected:
 
 private:
 	// Transition a resource
-	void TransitionResource(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	void TransitionResource(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
 		Microsoft::WRL::ComPtr<ID3D12Resource> resource,
 		D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
 
 	// Clear a render target view.
-	void ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	void ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor);
 
 	// Clear the depth of a depth-stencil view.
-	void ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> commandList,
+	void ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
 		D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth = 1.0f);
 
 	// Resize the depth buffer to match the size of the client area.
@@ -68,7 +69,7 @@ private:
 	// Pipeline state object.
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
 
-	std::unique_ptr<Mesh> m_CubeMesh = nullptr;
+	std::shared_ptr<StaticMesh> m_CubeMesh = nullptr;
 
 	uint64_t		m_FenceValues[Window::BufferCount] = {};
 

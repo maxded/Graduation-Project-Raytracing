@@ -1,6 +1,6 @@
 #include <FrameworkPCH.h>
 
-#include <Mesh.h>
+#include <StaticMesh.h>
 #include <Application.h>
 
 #include <cstdlib>
@@ -16,16 +16,16 @@ const D3D12_INPUT_ELEMENT_DESC VertexData::InputElements[] =
 	{ "TEXCOORD",   0, DXGI_FORMAT_R32G32_FLOAT,    0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 };
 
-Mesh::Mesh()
+StaticMesh::StaticMesh()
 	: m_IndexCount(0)
 {}
 
-Mesh::~Mesh()
+StaticMesh::~StaticMesh()
 {
 	// Allocated resources will be cleaned automatically when the pointers go out of scope.
 }
 
-void Mesh::Render(ID3D12GraphicsCommandList2& commandList, uint32_t instanceCount, uint32_t firstInstance)
+void StaticMesh::Render(ID3D12GraphicsCommandList4& commandList, uint32_t instanceCount, uint32_t firstInstance)
 {
 	commandList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList.IASetVertexBuffers(0, 1, &m_VertexBuffer.GetVertexBufferView());
@@ -41,7 +41,7 @@ void Mesh::Render(ID3D12GraphicsCommandList2& commandList, uint32_t instanceCoun
 	}
 }
 
-std::unique_ptr<Mesh> Mesh::CreateCube(ID3D12GraphicsCommandList2& commandList, float size, bool rhcoords)
+std::shared_ptr<StaticMesh> StaticMesh::CreateCube(ID3D12GraphicsCommandList4& commandList, float size, bool rhcoords)
 {
 	// A cube has six faces, each one pointing in a different direction.
 	const int FaceCount = 6;
@@ -94,7 +94,6 @@ std::unique_ptr<Mesh> Mesh::CreateCube(ID3D12GraphicsCommandList2& commandList, 
 		float g = rand() % 100 - 10;
 		float b = rand() % 100 - 10;
 
-	
 		FXMVECTOR color = XMVectorSet(r, g, b, 0.0f);
 
 		// Four vertices per face.
@@ -103,9 +102,9 @@ std::unique_ptr<Mesh> Mesh::CreateCube(ID3D12GraphicsCommandList2& commandList, 
 		vertices.push_back(VertexData((normal + side1 + side2) * size, normal, color, textureCoordinates[2]));
 		vertices.push_back(VertexData((normal + side1 - side2) * size, normal, color, textureCoordinates[3]));
 	}
-
+	
 	// Create the primitive object.
-	std::unique_ptr<Mesh> mesh(new Mesh());
+	std::shared_ptr<StaticMesh> mesh = std::make_shared<StaticMesh>();
 
 	mesh->Initialize(commandList, vertices, indices, rhcoords);
 
@@ -127,7 +126,7 @@ static void ReverseWinding(IndexCollection& indices, VertexCollection& vertices)
 	}
 }
 
-void Mesh::Initialize(ID3D12GraphicsCommandList2& commandList, VertexCollection& vertices, IndexCollection& indices, bool rhcoords)
+void StaticMesh::Initialize(ID3D12GraphicsCommandList4& commandList, VertexCollection& vertices, IndexCollection& indices, bool rhcoords)
 {
 	if (vertices.size() >= USHRT_MAX)
 		throw std::exception("Too many vertices for 16-bit index buffer");
@@ -148,7 +147,7 @@ void Mesh::Initialize(ID3D12GraphicsCommandList2& commandList, VertexCollection&
 	m_IndexCount = static_cast<UINT>(indices.size());
 }
 
-void Mesh::CopyBuffer(ID3D12GraphicsCommandList2& commandList, Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags)
+void StaticMesh::CopyBuffer(ID3D12GraphicsCommandList4& commandList, Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags)
 {
 	auto device = Application::Get().GetDevice();
 
@@ -192,4 +191,11 @@ void Mesh::CopyBuffer(ID3D12GraphicsCommandList2& commandList, Buffer& buffer, s
 
 	buffer.SetD3D12Resource(d3d12Resource);
 	buffer.CreateViews(numElements, elementSize);
+
+	// Transition for acceleration structure compatibility 
+	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		buffer.GetD3D12Resource().Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	commandList.ResourceBarrier(1, &barrier);
 }

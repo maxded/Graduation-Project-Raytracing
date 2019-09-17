@@ -5,9 +5,9 @@
 
 #include <DirectXMath.h>
 #include <d3d12.h>
-
-#include <memory> 
+ 
 #include <vector>
+#include <memory>
 
 struct VertexData
 {
@@ -45,24 +45,30 @@ struct VertexData
 using VertexCollection = std::vector<VertexData>;
 using IndexCollection  = std::vector<uint16_t>;
 
-class Mesh
+class StaticMesh
 {
 public:
-	void Render(ID3D12GraphicsCommandList2& commandList, uint32_t instanceCount = 1, uint32_t firstInstance = 0);
+	StaticMesh();
+	virtual ~StaticMesh();
 
-	static std::unique_ptr<Mesh> CreateCube(ID3D12GraphicsCommandList2& commandList, float size = 1, bool rhcoords = false);
+	void Render(ID3D12GraphicsCommandList4& commandList, uint32_t instanceCount = 1, uint32_t firstInstance = 0);
+
+	const VertexBuffer& GetVertexBuffer() const { return m_VertexBuffer; }
+	const IndexBuffer& GetIndexBuffer() const { return m_IndexBuffer; }
+
+	static std::shared_ptr<StaticMesh> CreateCube(ID3D12GraphicsCommandList4& commandList, float size = 1, bool rhcoords = false);
 
 protected:
 private:
-	friend struct std::default_delete<Mesh>;
+	friend struct std::default_delete<StaticMesh>;
 
-	Mesh();
-	Mesh(const Mesh& copy) = delete;
-	virtual ~Mesh();
+	StaticMesh(const StaticMesh& copy) = delete;
 
-	void Initialize(ID3D12GraphicsCommandList2& commandList, VertexCollection& vertices, IndexCollection& indices, bool rhcoords);
 
-	void CopyBuffer(ID3D12GraphicsCommandList2& commandList, Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+
+	void Initialize(ID3D12GraphicsCommandList4& commandList, VertexCollection& vertices, IndexCollection& indices, bool rhcoords);
+
+	void CopyBuffer(ID3D12GraphicsCommandList4& commandList, Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
 
 	VertexBuffer m_VertexBuffer;
 	IndexBuffer  m_IndexBuffer;

@@ -147,15 +147,22 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> Application::GetAdapter(bool bUseWarp)
 	return dxgiAdapter4;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device2> Application::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
+Microsoft::WRL::ComPtr<ID3D12Device5> Application::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
 {
-	Microsoft::WRL::ComPtr<ID3D12Device2> d3d12Device2;
-	D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2));
+	Microsoft::WRL::ComPtr<ID3D12Device5> d3d12Device5;
+	D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&d3d12Device5));
+
+	D3D12_FEATURE_DATA_D3D12_OPTIONS5 features5 = {};
+	ThrowIfFailed(d3d12Device5->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features5, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)));
+	if (features5.RaytracingTier == D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+	{
+		assert(false && "Raytracing is not supported on this device.");
+	}
 
 		// Enable debug messages in debug mode.
 #if defined(_DEBUG)
 	Microsoft::WRL::ComPtr<ID3D12InfoQueue> pInfoQueue;
-	if (SUCCEEDED(d3d12Device2.As(&pInfoQueue)))
+	if (SUCCEEDED(d3d12Device5.As(&pInfoQueue)))
 	{
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -191,7 +198,7 @@ Microsoft::WRL::ComPtr<ID3D12Device2> Application::CreateDevice(Microsoft::WRL::
 	}
 #endif
 
-	return d3d12Device2;
+	return d3d12Device5;
 }
 
 bool Application::CheckTearingSupport()
@@ -293,7 +300,7 @@ void Application::Quit(int exitCode)
 	PostQuitMessage(exitCode);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device2> Application::GetDevice() const
+Microsoft::WRL::ComPtr<ID3D12Device5> Application::GetDevice() const
 {
 	return m_d3d12Device;
 }
