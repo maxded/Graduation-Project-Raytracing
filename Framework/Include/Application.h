@@ -1,5 +1,7 @@
 #pragma once
 
+#include "DescriptorAllocation.h"
+
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <wrl.h>
@@ -8,6 +10,7 @@
 #include <string>
 
 class CommandQueue;
+class DescriptorAllocator;
 class Game;
 class Window;
 
@@ -35,6 +38,11 @@ public:
 	bool IsTearingSupported() const;
 
 	/**
+	 * Check if the requested multisample quality is supported for the given format.
+	 */
+	DXGI_SAMPLE_DESC GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE) const;
+
+	/**
 	* Create a new DirectX11 render window instance.
 	* @param windowName The name of the window. This name will appear in the title bar of the window. This name should be unique.
 	* @param clientWidth The width (in pixels) of the window's client area.
@@ -53,7 +61,7 @@ public:
 	void DestroyWindow(std::shared_ptr<Window> window);
 
 	/**
-	* Find a window by the window name.
+	* Find window
 	*/
 	std::shared_ptr<Window> GetWindow();
 
@@ -72,7 +80,7 @@ public:
 	/**
 	 * Get the Direct3D 12 device
 	 */
-	Microsoft::WRL::ComPtr<ID3D12Device5> GetDevice() const;
+	Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() const;
 	/**
 	 * Get a command queue. Valid types are:
 	 * - D3D12_COMMAND_LIST_TYPE_DIRECT : Can be used for draw, dispatch, or copy commands.
@@ -86,10 +94,26 @@ public:
 	 */
 	void Flush();
 
+	/**
+	 * Allocate a number of CPU visible descriptors.
+	 */
+	DescriptorAllocation AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors = 1);
+
+	/**
+	 * Release stale descriptors. This should only be called with a completed frame counter.
+	 */
+	void ReleaseStaleDescriptors(uint64_t finishedFrame);
+
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type);
 	UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE type) const;
 
+	static uint64_t GetFrameCount()
+	{
+		return ms_FrameCount;
+	}
+
 protected:
+
 	// Create an application instance.
 	Application(HINSTANCE hInst);
 	// Destroy the application instance and all windows associated with this application.
@@ -99,21 +123,25 @@ protected:
 	void Initialize();
 
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool bUseWarp);
-	Microsoft::WRL::ComPtr<ID3D12Device5> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
+	Microsoft::WRL::ComPtr<ID3D12Device2> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter);
 	bool CheckTearingSupport();
 
 private:
+	friend LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 	Application(const Application& copy) = delete;
 	Application& operator=(const Application& other) = delete;
 
-	// The application instance handle that this application was created with.
 	HINSTANCE m_hInstance;
 
-	Microsoft::WRL::ComPtr<ID3D12Device5> m_d3d12Device;
+	Microsoft::WRL::ComPtr<ID3D12Device2> m_d3d12Device;
 
 	std::shared_ptr<CommandQueue> m_DirectCommandQueue;
 	std::shared_ptr<CommandQueue> m_ComputeCommandQueue;
 	std::shared_ptr<CommandQueue> m_CopyCommandQueue;
 
+	std::unique_ptr<DescriptorAllocator> m_DescriptorAllocators[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+
 	bool m_TearingSupported;
+
+	static uint64_t ms_FrameCount;
 };

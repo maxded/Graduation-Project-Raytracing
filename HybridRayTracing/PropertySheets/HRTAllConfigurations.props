@@ -9,7 +9,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(SolutionDir)Framework/Include;$(SolutionDir)Framework/Include/Utility;$(SolutionDir)Framework/Include/External;$(SolutionDir)Framework/Include/D3D12Resources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Framework/Include;$(SolutionDir)Framework/Include/Utility;$(SolutionDir)Framework/Include/External;$(SolutionDir)Framework/Include/D3D12Resources;$(SolutionDir)Framework/Include/ResourceManagement;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_ENABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <link>    

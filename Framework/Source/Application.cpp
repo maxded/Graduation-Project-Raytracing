@@ -3,6 +3,8 @@
 #include <Application.h>
 #include <Window.h>
 #include <Game.h>
+#include <DescriptorAllocator.h>
+#include <Resource.h>
 #include <CommandQueue.h>
 
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"Graphics Practise Environment";
@@ -11,6 +13,8 @@ using WindowPtr = std::shared_ptr<Window>;
 
 static Application* gs_pSingleton	= nullptr;
 static WindowPtr    gs_pWindow		= nullptr;
+
+uint64_t Application::ms_FrameCount = 0;
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -28,26 +32,11 @@ Application::Application(HINSTANCE hInst)
 	: m_hInstance(hInst)
 	, m_TearingSupported(false)
 {
-}
-
-Application::~Application()
-{
-	Flush();
-}
-
-void Application::Initialize()
-{
 	// Windows 10 Creators update adds Per Monitor V2 DPI awareness context.
 	// Using this awareness context allows the client area of the window 
 	// to achieve 100% scaling while still allowing non-client window content to 
 	// be rendered in a DPI sensitive fashion.
 	SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-
-#if defined(_DEBUG)
-	Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
-	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
-	debugInterface->EnableDebugLayer();
-#endif
 
 	WNDCLASSEXW wndClass = { 0 };
 
@@ -64,18 +53,57 @@ void Application::Initialize()
 	{
 		MessageBoxA(NULL, "Unable to register the window class.", "Error", MB_OK | MB_ICONERROR);
 	}
+}
+
+Application::~Application()
+{
+	Flush();
+}
+
+void Application::Initialize()
+{
+#if defined(_DEBUG)
+	// Always enable the debug layer before doing anything DX12 related
+	// so all possible errors generated while creating DX12 objects
+	// are caught by the debug layer.
+	ComPtr<ID3D12Debug1> debugInterface;
+	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
+	debugInterface->EnableDebugLayer();
+	// Enable these if you want full validation (will slow down rendering a lot).
+	//debugInterface->SetEnableGPUBasedValidation(TRUE);
+	//debugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
+#endif
 
 	auto dxgiAdapter = GetAdapter(false);
+	if (!dxgiAdapter)
+	{
+		// If no supporting DX12 adapters exist, fall back to WARP
+		dxgiAdapter = GetAdapter(true);
+	}
+
 	if (dxgiAdapter)
 	{
 		m_d3d12Device = CreateDevice(dxgiAdapter);
 	}
+	else
+	{
+		throw std::exception("DXGI adapter enumeration failed.");
+	}
 
-	m_DirectCommandQueue	= std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	m_ComputeCommandQueue	= std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
-	m_CopyCommandQueue		= std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COPY);
+	m_DirectCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	m_ComputeCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+	m_CopyCommandQueue = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COPY);
 
 	m_TearingSupported = CheckTearingSupport();
+
+	// Create descriptor allocators
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		m_DescriptorAllocators[i] = std::make_unique<DescriptorAllocator>(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
+	}
+
+	// Initialize frame counter 
+	ms_FrameCount = 0;
 }
 
 void Application::Create(HINSTANCE hInst)
@@ -147,22 +175,16 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> Application::GetAdapter(bool bUseWarp)
 	return dxgiAdapter4;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device5> Application::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
+Microsoft::WRL::ComPtr<ID3D12Device2> Application::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter)
 {
-	Microsoft::WRL::ComPtr<ID3D12Device5> d3d12Device5;
-	D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&d3d12Device5));
-
-	D3D12_FEATURE_DATA_D3D12_OPTIONS5 features5 = {};
-	ThrowIfFailed(d3d12Device5->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features5, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)));
-	if (features5.RaytracingTier == D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
-	{
-		assert(false && "Raytracing is not supported on this device.");
-	}
+	ComPtr<ID3D12Device2> d3d12Device2;
+	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
+	//    NAME_D3D12_OBJECT(d3d12Device2);
 
 		// Enable debug messages in debug mode.
 #if defined(_DEBUG)
-	Microsoft::WRL::ComPtr<ID3D12InfoQueue> pInfoQueue;
-	if (SUCCEEDED(d3d12Device5.As(&pInfoQueue)))
+	ComPtr<ID3D12InfoQueue> pInfoQueue;
+	if (SUCCEEDED(d3d12Device2.As(&pInfoQueue)))
 	{
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -170,7 +192,6 @@ Microsoft::WRL::ComPtr<ID3D12Device5> Application::CreateDevice(Microsoft::WRL::
 
 		// Suppress whole categories of messages
 		//D3D12_MESSAGE_CATEGORY Categories[] = {};
-
 
 		// Suppress messages based on their severity level
 		D3D12_MESSAGE_SEVERITY Severities[] =
@@ -198,7 +219,7 @@ Microsoft::WRL::ComPtr<ID3D12Device5> Application::CreateDevice(Microsoft::WRL::
 	}
 #endif
 
-	return d3d12Device5;
+	return d3d12Device2;
 }
 
 bool Application::CheckTearingSupport()
@@ -226,6 +247,29 @@ bool Application::CheckTearingSupport()
 bool Application::IsTearingSupported() const
 {
 	return m_TearingSupported;
+}
+
+DXGI_SAMPLE_DESC Application::GetMultisampleQualityLevels(DXGI_FORMAT format, UINT numSamples, D3D12_MULTISAMPLE_QUALITY_LEVEL_FLAGS flags) const
+{
+	DXGI_SAMPLE_DESC sampleDesc = { 1, 0 };
+
+	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS qualityLevels;
+	qualityLevels.Format = format;
+	qualityLevels.SampleCount = 1;
+	qualityLevels.Flags = flags;
+	qualityLevels.NumQualityLevels = 0;
+
+	while (qualityLevels.SampleCount <= numSamples && SUCCEEDED(m_d3d12Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &qualityLevels, sizeof(D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS))) && qualityLevels.NumQualityLevels > 0)
+	{
+		// That works...
+		sampleDesc.Count = qualityLevels.SampleCount;
+		sampleDesc.Quality = qualityLevels.NumQualityLevels - 1;
+
+		// But can we do better?
+		qualityLevels.SampleCount *= 2;
+	}
+
+	return sampleDesc;
 }
 
 std::shared_ptr<Window> Application::CreateRenderWindow(const std::wstring& windowName, uint16_t clientWidth, uint16_t clientHeight, bool vSync)
@@ -300,7 +344,7 @@ void Application::Quit(int exitCode)
 	PostQuitMessage(exitCode);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device5> Application::GetDevice() const
+Microsoft::WRL::ComPtr<ID3D12Device2> Application::GetDevice() const
 {
 	return m_d3d12Device;
 }
@@ -331,6 +375,19 @@ void Application::Flush()
 	m_DirectCommandQueue->Flush();
 	m_ComputeCommandQueue->Flush();
 	m_CopyCommandQueue->Flush();
+}
+
+DescriptorAllocation Application::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
+{
+	return m_DescriptorAllocators[type]->Allocate(numDescriptors);
+}
+
+void Application::ReleaseStaleDescriptors(uint64_t finishedFrame)
+{
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		m_DescriptorAllocators[i]->ReleaseStaleDescriptors(finishedFrame);
+	}
 }
 
 Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Application::CreateDescriptorHeap(UINT numDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE type)
@@ -392,10 +449,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 		{
 		case WM_PAINT:
 		{
+			++Application::ms_FrameCount;
+
 			// Delta time will be filled in by the Window.
-			UpdateEventArgs updateEventArgs(0.0f, 0.0f);
+			UpdateEventArgs updateEventArgs(0.0f, 0.0f, Application::ms_FrameCount);
 			gs_pWindow->OnUpdate(updateEventArgs);
-			RenderEventArgs renderEventArgs(0.0f, 0.0f);
+			RenderEventArgs renderEventArgs(0.0f, 0.0f, Application::ms_FrameCount);
 			// Delta time will be filled in by the Window.
 			gs_pWindow->OnRender(renderEventArgs);
 		}

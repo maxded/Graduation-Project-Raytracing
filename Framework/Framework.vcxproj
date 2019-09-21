@@ -76,8 +76,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\Application.h" />
+    <ClInclude Include="Include\CommandList.h" />
     <ClInclude Include="Include\CommandQueue.h" />
     <ClInclude Include="Include\D3D12Resources\Buffer.h" />
+    <ClInclude Include="Include\D3D12Resources\ByteAddressBuffer.h" />
     <ClInclude Include="Include\D3D12Resources\ConstantBuffer.h" />
     <ClInclude Include="Include\D3D12Resources\IndexBuffer.h" />
     <ClInclude Include="Include\D3D12Resources\Resource.h" />
@@ -86,7 +88,16 @@
     <ClInclude Include="Include\D3D12Resources\VertexBuffer.h" />
     <ClInclude Include="Include\External\d3dx12.h" />
     <ClInclude Include="Include\Game.h" />
+    <ClInclude Include="Include\RenderTarget.h" />
+    <ClInclude Include="Include\ResourceManagement\DescriptorAllocation.h" />
+    <ClInclude Include="Include\ResourceManagement\DescriptorAllocatorPage.h" />
+    <ClInclude Include="Include\ResourceManagement\DescriptorAllocator.h" />
+    <ClInclude Include="Include\ResourceManagement\DynamicDescriptorHeap.h" />
+    <ClInclude Include="Include\ResourceManagement\ResourceStateTracker.h" />
+    <ClInclude Include="Include\RootSignature.h" />
     <ClInclude Include="Include\StaticMesh.h" />
+    <ClInclude Include="Include\TextureUsage.h" />
+    <ClInclude Include="Include\ThreadSafeQueue.h" />
     <ClInclude Include="Include\UploadBuffer.h" />
     <ClInclude Include="Include\Utility\Defines.h" />
     <ClInclude Include="Include\Utility\Events.h" />
@@ -98,8 +109,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\CommandList.cpp" />
     <ClCompile Include="Source\CommandQueue.cpp" />
     <ClCompile Include="Source\D3D12Resources\Buffer.cpp" />
+    <ClCompile Include="Source\D3D12Resources\ByteAddressBuffer.cpp" />
     <ClCompile Include="Source\D3D12Resources\ConstantBuffer.cpp" />
     <ClCompile Include="Source\D3D12Resources\IndexBuffer.cpp" />
     <ClCompile Include="Source\D3D12Resources\Resource.cpp" />
@@ -107,6 +120,13 @@
     <ClCompile Include="Source\D3D12Resources\Texture.cpp" />
     <ClCompile Include="Source\D3D12Resources\VertexBuffer.cpp" />
     <ClCompile Include="Source\Game.cpp" />
+    <ClCompile Include="Source\RenderTarget.cpp" />
+    <ClCompile Include="Source\ResourceManagement\DescriptorAllocation.cpp" />
+    <ClCompile Include="Source\ResourceManagement\DescriptorAllocator.cpp" />
+    <ClCompile Include="Source\ResourceManagement\DescriptorAllocatorPage.cpp" />
+    <ClCompile Include="Source\ResourceManagement\DynamicDescriptorHeap.cpp" />
+    <ClCompile Include="Source\ResourceManagement\ResourceStateTracker.cpp" />
+    <ClCompile Include="Source\RootSignature.cpp" />
     <ClCompile Include="Source\StaticMesh.cpp" />
     <ClCompile Include="Source\UploadBuffer.cpp" />
     <ClCompile Include="Source\Utility\HighResolutionClock.cpp" />

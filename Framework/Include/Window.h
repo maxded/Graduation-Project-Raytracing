@@ -9,13 +9,15 @@
 
 #include <Events.h>
 #include <HighResolutionClock.h>
+#include <RenderTarget.h>
+#include <Texture.h>
 
 #include <string>
 #include <memory>
 
 class Game;
 
-class Window
+class Window : public std::enable_shared_from_this<Window>
 {
 public:
 	// Number of swapchain back buffers.
@@ -62,25 +64,17 @@ public:
 	void Hide();
 
 	/**
-	 * Return the current back buffer index.
+	 * Get the render target of the window. This method should be called every
+	 * frame since the color attachment point changes depending on the window's
+	 * current back buffer.
 	 */
-	UINT GetCurrentBackBufferIndex() const;
+	const RenderTarget& GetRenderTarget() const;
 
 	/**
 	 * Present the swapchain's back buffer to the screen.
 	 * Returns the current back buffer index after the present.
 	 */
-	UINT Present();
-
-	/**
-	 * Get the render target view for the current back buffer.
-	 */
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRenderTargetView() const;
-
-	/**
-	 * Get the back buffer resource for the current back buffer.
-	 */
-	Microsoft::WRL::ComPtr<ID3D12Resource> GetCurrentBackBuffer() const;
+	UINT Present(const Texture& texture = Texture());
 
 protected:
 	// The Window procedure needs to call protected methods of this class.
@@ -142,15 +136,17 @@ private:
 
 	HighResolutionClock m_UpdateClock;
 	HighResolutionClock m_RenderClock;
-	uint64_t m_FrameCounter;
+
+	UINT64 m_FenceValues[BufferCount];
+	uint64_t m_FrameValues[BufferCount];
 
 	std::weak_ptr<Game> m_pGame;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain4>			m_dxgiSwapChain;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_d3d12RTVDescriptorHeap;
-	Microsoft::WRL::ComPtr<ID3D12Resource>			m_d3d12BackBuffers[BufferCount];
+	Texture m_BackBufferTextures[BufferCount];
+	// Marked mutable to allow modification in a const function.
+	mutable RenderTarget m_RenderTarget;
 
-	UINT m_RTVDescriptorSize;
 	UINT m_CurrentBackBufferIndex;
 
 	RECT m_WindowRect;

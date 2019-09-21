@@ -1,7 +1,15 @@
 #pragma once
+
+#include <Camera.h>
 #include <Game.h>
+#include <IndexBuffer.h>
+#include <Light.h>
 #include <Window.h>
-#include <memory>
+#include <StaticMesh.h>
+#include <RenderTarget.h>
+#include <RootSignature.h>
+#include <Texture.h>
+#include <VertexBuffer.h>
 
 #include <DirectXMath.h>
 
@@ -13,6 +21,8 @@ public:
 	using game = Game;
 
 	HybridRayTracingDemo(const std::wstring& name, int width, int height, bool vSync = false);
+	virtual ~HybridRayTracingDemo();
+
 	/**
 	 *  Load content required for the demo.
 	 */
@@ -39,48 +49,71 @@ protected:
 	 */
 	virtual void OnKeyPressed(KeyEventArgs& e) override;
 
+	virtual void OnKeyReleased(KeyEventArgs& e) override;
+
+	virtual void OnMouseMoved(MouseMotionEventArgs& e) override;
+
+	virtual void OnMouseWheel(MouseWheelEventArgs& e) override;
+
 	virtual void OnResize(ResizeEventArgs& e) override;
 
+	void RescaleHDRRenderTarget(float scale);
+
+
 private:
-	// Transition a resource
-	void TransitionResource(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
-		Microsoft::WRL::ComPtr<ID3D12Resource> resource,
-		D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
+	// Some geometry to render.
+	std::unique_ptr<StaticMesh> m_CubeMesh;
+	std::unique_ptr<StaticMesh> m_SphereMesh;
+	std::unique_ptr<StaticMesh> m_ConeMesh;
+	std::unique_ptr<StaticMesh> m_TorusMesh;
+	std::unique_ptr<StaticMesh> m_PlaneMesh;
 
-	// Clear a render target view.
-	void ClearRTV(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv, FLOAT* clearColor);
+	// HDR Render target
+	RenderTarget m_HDRRenderTarget;
 
-	// Clear the depth of a depth-stencil view.
-	void ClearDepth(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandList,
-		D3D12_CPU_DESCRIPTOR_HANDLE dsv, FLOAT depth = 1.0f);
-
-	// Resize the depth buffer to match the size of the client area.
-	void ResizeDepthBuffer(int width, int height);
-
-	// Depth buffer.
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_DepthBuffer;
-	// Descriptor heap for depth buffer.
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DSVHeap;
-
-	// Root signature
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
+	// Root signatures
+	RootSignature m_HDRRootSignature;
+	RootSignature m_SDRRootSignature;
 
 	// Pipeline state object.
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_HDRPipelineState;
+	// HDR -> SDR tone mapping PSO.
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SDRPipelineState;
 
-	std::shared_ptr<StaticMesh> m_CubeMesh = nullptr;
+	D3D12_RECT m_ScissorRect;
 
-	uint64_t		m_FenceValues[Window::BufferCount] = {};
+	Camera m_Camera;
+	struct alignas(16) CameraData
+	{
+		DirectX::XMVECTOR m_InitialCamPos;
+		DirectX::XMVECTOR m_InitialCamRot;
+		float m_InitialFov;
+	};
+	CameraData* m_pAlignedCameraData;
 
-	D3D12_VIEWPORT m_Viewport;
-	D3D12_RECT	   m_ScissorRect;
+	// Camera controller
+	float m_Forward;
+	float m_Backward;
+	float m_Left;
+	float m_Right;
+	float m_Up;
+	float m_Down;
 
-	float m_FoV;
+	float m_Pitch;
+	float m_Yaw;
 
-	DirectX::XMMATRIX m_ModelMatrix;
-	DirectX::XMMATRIX m_ViewMatrix;
-	DirectX::XMMATRIX m_ProjectionMatrix;
+	// Rotate the lights in a circle.
+	bool m_AnimateLights;
+	// Set to true if the Shift key is pressed.
+	bool m_Shift;
 
-	bool m_ContentLoaded;
+	int m_Width;
+	int m_Height;
+
+	// Scale the HDR render target to a fraction of the window size.
+	float m_RenderScale;
+
+	// Define some lights.
+	std::vector<PointLight> m_PointLights;
+	std::vector<SpotLight> m_SpotLights;
 };

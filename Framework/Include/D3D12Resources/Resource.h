@@ -8,14 +8,17 @@
 class Resource
 {
 public:
-	Resource(const std::wstring& name = L"");
-	Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue = nullptr, const std::wstring& name = L"");
-	Resource(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const std::wstring& name = L"");
+	explicit Resource(const std::wstring& name = L"");
+	explicit Resource(const D3D12_RESOURCE_DESC& resourceDesc,
+		const D3D12_CLEAR_VALUE* clearValue = nullptr,
+		const std::wstring& name = L"");
+	explicit Resource(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const std::wstring& name = L"");
+
 	Resource(const Resource& copy);
 	Resource(Resource&& copy);
 
 	Resource& operator=(const Resource& other);
-	Resource& operator=(Resource&& other);
+	Resource& operator=(Resource&& other) noexcept;
 
 	virtual ~Resource();
 
@@ -46,7 +49,8 @@ public:
 
 	// Replace the D3D12 resource
 	// Should only be called by the CommandList.
-	virtual void SetD3D12Resource(Microsoft::WRL::ComPtr<ID3D12Resource> d3d12Resource, const D3D12_CLEAR_VALUE* clearValue = nullptr);
+	virtual void SetD3D12Resource(Microsoft::WRL::ComPtr<ID3D12Resource> d3d12Resource,
+		const D3D12_CLEAR_VALUE* clearValue = nullptr);
 
 	/**
 	 * Get the SRV for a resource.
@@ -77,9 +81,22 @@ public:
 	 */
 	virtual void Reset();
 
+	/**
+	 * Check if the resource format supports a specific feature.
+	 */
+	bool CheckFormatSupport(D3D12_FORMAT_SUPPORT1 formatSupport) const;
+	bool CheckFormatSupport(D3D12_FORMAT_SUPPORT2 formatSupport) const;
+
+
 protected:
 	// The underlying D3D12 resource.
-	Microsoft::WRL::ComPtr<ID3D12Resource>	m_d3d12Resource;
-	std::unique_ptr<D3D12_CLEAR_VALUE>		m_d3d12ClearValue;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_d3d12Resource;
+	D3D12_FEATURE_DATA_FORMAT_SUPPORT m_FormatSupport;
+	std::unique_ptr<D3D12_CLEAR_VALUE> m_d3d12ClearValue;
 	std::wstring m_ResourceName;
+
+private:
+	// Check the format support and populate the m_FormatSupport structure.
+	void CheckFeatureSupport();
+
 };

@@ -17,14 +17,34 @@
     <ClCompile Include="Source\HybridRayTracingDemo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Material.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Light.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\HybridRayTracingDemo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Material.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Light.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders\VertexShader.hlsl" />
-    <FxCompile Include="Shaders\PixelShader.hlsl" />
+    <FxCompile Include="Shaders\HDR_VS.hlsl" />
+    <FxCompile Include="Shaders\HDR_PS.hlsl" />
+    <FxCompile Include="Shaders\HDRtoSDR_PS.hlsl" />
+    <FxCompile Include="Shaders\HDRtoSDR_VS.hlsl" />
   </ItemGroup>
 </Project>

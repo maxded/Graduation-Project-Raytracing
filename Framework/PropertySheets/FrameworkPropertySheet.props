@@ -8,7 +8,7 @@
   </PropertyGroup>  
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)Include;$(ProjectDir)Include/D3D12Resources;$(ProjectDir)Include/Utility;$(ProjectDir)Include/External%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Include;$(ProjectDir)Include/D3D12Resources;$(ProjectDir)Include/ResourceManagement;$(ProjectDir)Include/Utility;$(ProjectDir)Include/External%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <link>    
       <AdditionalLibraryDirectories>%DXSDK_DIR%\Lib%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 
