@@ -87,7 +87,12 @@
     <ClInclude Include="Include\D3D12Resources\Texture.h" />
     <ClInclude Include="Include\D3D12Resources\VertexBuffer.h" />
     <ClInclude Include="Include\External\d3dx12.h" />
+    <ClInclude Include="Include\External\gltf.h" />
+    <ClInclude Include="Include\External\json.hpp" />
     <ClInclude Include="Include\Game.h" />
+    <ClInclude Include="Include\Mesh.h" />
+    <ClInclude Include="Include\MeshData.h" />
+    <ClInclude Include="Include\Model.h" />
     <ClInclude Include="Include\RenderTarget.h" />
     <ClInclude Include="Include\ResourceManagement\DescriptorAllocation.h" />
     <ClInclude Include="Include\ResourceManagement\DescriptorAllocatorPage.h" />
@@ -120,6 +125,9 @@
     <ClCompile Include="Source\D3D12Resources\Texture.cpp" />
     <ClCompile Include="Source\D3D12Resources\VertexBuffer.cpp" />
     <ClCompile Include="Source\Game.cpp" />
+    <ClCompile Include="Source\Mesh.cpp" />
+    <ClCompile Include="Source\MeshData.cpp" />
+    <ClCompile Include="Source\Model.cpp" />
     <ClCompile Include="Source\RenderTarget.cpp" />
     <ClCompile Include="Source\ResourceManagement\DescriptorAllocation.cpp" />
     <ClCompile Include="Source\ResourceManagement\DescriptorAllocator.cpp" />

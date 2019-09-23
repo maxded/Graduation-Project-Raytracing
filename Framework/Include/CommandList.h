@@ -95,6 +95,11 @@ public:
 	 */
 	void ResolveSubresource(Resource& dstRes, const Resource& srcRes, uint32_t dstSubresource = 0, uint32_t srcSubresource = 0);
 
+	// Copy the contents of a CPU buffer to a GPU buffer (possibly replacing the previous buffer contents).
+	void CopyBuffer(Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+
+	void CopyBuffer(Buffer& buffer, size_t bufferSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+
 	/**
 	 * Copy the contents to a vertex buffer in GPU memory.
 	 */
@@ -190,7 +195,6 @@ public:
 		static_assert(sizeof(T) % sizeof(uint32_t) == 0, "Size of type must be a multiple of 4 bytes");
 		SetCompute32BitConstants(rootParameterIndex, sizeof(T) / sizeof(uint32_t), &constants);
 	}
-
 
 	/**
 	 * Set the vertex buffer to the rendering pipeline.
@@ -341,9 +345,6 @@ protected:
 private:
 	void TrackResource(Microsoft::WRL::ComPtr<ID3D12Object> object);
 	void TrackResource(const Resource& res);
-
-	// Copy the contents of a CPU buffer to a GPU buffer (possibly replacing the previous buffer contents).
-	void CopyBuffer(Buffer& buffer, size_t numElements, size_t elementSize, const void* bufferData, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
 
 	// Binds the current descriptor heaps to the command list.
 	void BindDescriptorHeaps();

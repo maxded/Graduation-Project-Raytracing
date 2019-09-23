@@ -8,11 +8,12 @@ struct Mat
 
 ConstantBuffer<Mat> MatCB : register(b0, space0);
 
-struct VertexData
+struct VS_INPUT
 {
-	float3 Position : POSITION;
-	float3 Normal   : NORMAL;
-	float2 TexCoord : TEXCOORD;
+    float3 Position      : POSITION;
+    float3 Normal		: NORMAL;
+    float4 Tangent		: TANGENT;
+    float2 TexCoord     : TEXCOORD;
 };
 
 struct VertexShaderOutput
@@ -23,7 +24,7 @@ struct VertexShaderOutput
 	float4 Position   : SV_Position;
 };
 
-VertexShaderOutput main(VertexData IN)
+VertexShaderOutput main(VS_INPUT IN)
 {
 	VertexShaderOutput OUT;
 

@@ -15,7 +15,7 @@ class UploadBuffer
 public:
 	struct Allocation
 	{
-		void* CPU;
+		uint8_t* CPU;
 		D3D12_GPU_VIRTUAL_ADDRESS GPU;
 	};
 

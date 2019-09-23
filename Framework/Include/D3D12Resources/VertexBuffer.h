@@ -10,12 +10,14 @@ public:
 
 	virtual void CreateViews(size_t numElements, size_t elementSize) override;
 
+	void CreateViews(std::vector<size_t> numElements, std::vector<size_t> elementSize);
+
 	/**
 	 * Get the vertex buffer view for binding to the Input Assembler stage.
 	 */
-	D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> GetVertexBufferViews() const
 	{
-		return m_VertexBufferView;
+		return m_VertexBufferViews;
 	}
 
 	size_t GetNumVertices() const
@@ -23,10 +25,6 @@ public:
 		return m_NumVertices;
 	}
 
-	size_t GetVertexStride() const
-	{
-		return m_VertexStride;
-	}
 
 	/**
 	* Get the SRV for a resource.
@@ -42,5 +40,7 @@ private:
 	size_t m_NumVertices;
 	size_t m_VertexStride;
 
-	D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
+	uint32_t m_GPUOffset;
+
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> m_VertexBufferViews;
 };

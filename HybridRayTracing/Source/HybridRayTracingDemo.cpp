@@ -7,6 +7,7 @@
 #include <Window.h>
 #include <StaticMesh.h>
 #include <Material.h>
+#include <Model.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -25,6 +26,14 @@ using namespace DirectX;
 
 #include <DirectXColors.h>
 #include <DirectXMath.h>
+
+std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout =
+{
+	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+};
 
 struct Mat
 {
@@ -173,6 +182,8 @@ bool HybridRayTracingDemo::LoadContent()
 	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto commandList	= commandQueue->GetCommandList();
 
+	m_Model = Model::LoadModel("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
+
 	m_CubeMesh		= StaticMesh::CreateCube(*commandList);
 	m_SphereMesh	= StaticMesh::CreateSphere(*commandList);
 	m_ConeMesh		= StaticMesh::CreateCone(*commandList);
@@ -263,7 +274,7 @@ bool HybridRayTracingDemo::LoadContent()
 		} hdrPipelineStateStream;
 
 		hdrPipelineStateStream.pRootSignature			= m_HDRRootSignature.GetRootSignature().Get();
-		hdrPipelineStateStream.InputLayout				= { VertexData::InputElements, VertexData::InputElementCount };
+		hdrPipelineStateStream.InputLayout				= { &inputLayout[0], static_cast<UINT>(inputLayout.size()) };
 		hdrPipelineStateStream.PrimitiveTopologyType	= D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		hdrPipelineStateStream.VS						= CD3DX12_SHADER_BYTECODE(vs.Get());
 		hdrPipelineStateStream.PS						= CD3DX12_SHADER_BYTECODE(ps.Get());
@@ -493,9 +504,9 @@ void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 	m_SphereMesh->Render(*commandList);
 
 	// Draw a cube
-	translationMatrix = XMMatrixTranslation(4.0f, 4.0f, 4.0f);
-	rotationMatrix = XMMatrixRotationY(XMConvertToRadians(45.0f));
-	scaleMatrix = XMMatrixScaling(4.0f, 8.0f, 4.0f);
+	translationMatrix = XMMatrixIdentity();
+	rotationMatrix = XMMatrixIdentity();
+	scaleMatrix = XMMatrixIdentity();
 	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 
 	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
@@ -503,11 +514,11 @@ void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
 	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Ruby);
 
-	m_CubeMesh->Render(*commandList);
+	m_Model->Render(*commandList);
 
 	// Draw a torus
 	translationMatrix = XMMatrixTranslation(4.0f, 0.6f, -4.0f);
-	rotationMatrix = XMMatrixRotationY(XMConvertToRadians(45.0f));
+	rotationMatrix = XMMatrixRotationY(XMConvertToRadians(0.0f));
 	scaleMatrix = XMMatrixScaling(4.0f, 4.0f, 4.0f);
 	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 

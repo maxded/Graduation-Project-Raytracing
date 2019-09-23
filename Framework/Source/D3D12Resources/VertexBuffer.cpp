@@ -6,7 +6,8 @@ VertexBuffer::VertexBuffer(const std::wstring& name)
 	: Buffer(name)
 	, m_NumVertices(0)
 	, m_VertexStride(0)
-	, m_VertexBufferView({})
+	, m_VertexBufferViews({})
+	, m_GPUOffset(0)
 {}
 
 VertexBuffer::~VertexBuffer()
@@ -17,9 +18,31 @@ void VertexBuffer::CreateViews(size_t numElements, size_t elementSize)
 	m_NumVertices	= numElements;
 	m_VertexStride	= elementSize;
 
-	m_VertexBufferView.BufferLocation	= m_d3d12Resource->GetGPUVirtualAddress();
-	m_VertexBufferView.SizeInBytes		= static_cast<UINT>(m_NumVertices * m_VertexStride);
-	m_VertexBufferView.StrideInBytes	= static_cast<UINT>(m_VertexStride);
+	m_VertexBufferViews.resize(1);
+
+	m_VertexBufferViews[0].BufferLocation	= m_d3d12Resource->GetGPUVirtualAddress();
+	m_VertexBufferViews[0].SizeInBytes		= static_cast<UINT>(m_NumVertices * m_VertexStride);
+	m_VertexBufferViews[0].StrideInBytes	= static_cast<UINT>(m_VertexStride);
+}
+
+void VertexBuffer::CreateViews(std::vector<size_t> numElements, std::vector<size_t> elementSize)
+{
+	m_VertexBufferViews.resize(numElements.size());
+
+	for (int i = 0; i < numElements.size(); i++)
+	{
+		size_t numVertices	= numElements[i];
+		size_t elemSize		= elementSize[i];
+
+		m_VertexBufferViews[i].BufferLocation	= m_d3d12Resource->GetGPUVirtualAddress() + m_GPUOffset;
+		m_VertexBufferViews[i].SizeInBytes		= static_cast<UINT>(numVertices * elemSize);
+		m_VertexBufferViews[i].StrideInBytes	= static_cast<UINT>(elemSize);
+
+		m_GPUOffset = numVertices * elemSize;
+	}
+
+	m_NumVertices = numElements[0];
+	m_VertexStride = 0;
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE VertexBuffer::GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srvDesc) const
