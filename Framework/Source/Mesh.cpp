@@ -8,6 +8,7 @@
 
 
 Mesh::Mesh()
+	: m_SubMeshes{}
 {
 	
 }
@@ -27,18 +28,46 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandLis
 	{
 		MeshData mesh(doc, meshIndex, i);
 
-		MeshData::BufferInfo const& vBuffer = mesh.VertexBuffer();
-		MeshData::BufferInfo const& nBuffer = mesh.NormalBuffer();
-		MeshData::BufferInfo const& tBuffer = mesh.TangentBuffer();
-		MeshData::BufferInfo const& cBuffer = mesh.TexCoord0Buffer();
-		MeshData::BufferInfo const& iBuffer = mesh.IndexBuffer();
+		const MeshData::BufferInfo& vBuffer = mesh.VertexBuffer();
+		const MeshData::BufferInfo& nBuffer = mesh.NormalBuffer();
+		const MeshData::BufferInfo& tBuffer = mesh.TangentBuffer();
+		const MeshData::BufferInfo& cBuffer = mesh.TexCoord0Buffer();
+		const MeshData::BufferInfo& iBuffer = mesh.IndexBuffer();
 
 		if (!vBuffer.HasData() || !nBuffer.HasData() || !iBuffer.HasData())
 		{
 			throw std::runtime_error("Only meshes with vertex, normal, and index buffers are supported");
 		}
 
+		const fx::gltf::Primitive& primitive = doc.meshes[meshIndex].primitives[i];
+
 		SubMesh& submesh = m_SubMeshes[i];
+
+		// Get submesh primitive topology for rendering
+		switch (primitive.mode)
+		{
+		case fx::gltf::Primitive::Mode::Points:
+			submesh.m_Topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+			break;
+		case fx::gltf::Primitive::Mode::Lines:
+			submesh.m_Topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ;
+			break;
+		case fx::gltf::Primitive::Mode::LineLoop:
+			submesh.m_Topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+			break;
+		case fx::gltf::Primitive::Mode::LineStrip:
+			submesh.m_Topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+			break;
+		case fx::gltf::Primitive::Mode::Triangles:
+			submesh.m_Topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			break;
+		case fx::gltf::Primitive::Mode::TriangleStrip:
+			submesh.m_Topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			break;
+		case fx::gltf::Primitive::Mode::TriangleFan:
+			submesh.m_Topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			break;
+		}
 
 		const uint32_t totalBufferSize =
 			vBuffer.TotalSize +
@@ -47,14 +76,15 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandLis
 			cBuffer.TotalSize +
 			iBuffer.TotalSize;
 
-		uint8_t* CPU = static_cast<uint8_t*>(malloc(static_cast<size_t>(totalBufferSize)));
+		void* pBuffer = new char[totalBufferSize];
+		uint8_t* CPU = static_cast<uint8_t*>(pBuffer);
 		uint32_t offset = 0;
 
 		if (!CPU)
 			throw std::bad_alloc();
 
-		std::vector<size_t> numElements;
-		std::vector<size_t> elementSize;
+		std::vector<uint32_t> numElements;
+		std::vector<uint32_t> elementSize;
 
 		// Copy position data to upload buffer...
 		std::memcpy(CPU, vBuffer.Data, vBuffer.TotalSize);
@@ -98,6 +128,8 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandLis
 		// Create views for all individual buffers
 		submesh.m_VertexBuffer.CreateViews(numElements, elementSize);
 		submesh.m_IndexBuffer.CreateViews(iBuffer.Accessor->count, iBuffer.DataStride);
+
+		delete[] pBuffer;
 	}
 }
 
@@ -105,7 +137,7 @@ void Mesh::Render(CommandList& commandList)
 {
 	for (auto& submesh : m_SubMeshes)
 	{
-		commandList.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		commandList.SetPrimitiveTopology(submesh.m_Topology);
 		commandList.SetVertexBuffer(0, submesh.m_VertexBuffer);
 		if (submesh.m_IndexCount > 0)
 		{

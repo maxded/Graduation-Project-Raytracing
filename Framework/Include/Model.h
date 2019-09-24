@@ -11,7 +11,7 @@ class Mesh;
 class Model
 {
 public:
-	virtual ~Model();
+	~Model();
 
 	static std::unique_ptr<Model> LoadModel(const std::string& filename, CommandList& commandList);
 
@@ -21,6 +21,6 @@ protected:
 private:
 	Model();
 	Model(const Model& copy) = delete;
-	
+
 	std::vector<Mesh> m_Meshes;	
 };

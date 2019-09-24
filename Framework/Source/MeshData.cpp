@@ -4,8 +4,8 @@
 
 MeshData::MeshData(fx::gltf::Document const& doc, std::size_t meshIndex, std::size_t primitveIndex)
 {
-	fx::gltf::Mesh const& mesh = doc.meshes[meshIndex];
-	fx::gltf::Primitive const& primitive = mesh.primitives[primitveIndex];
+	const fx::gltf::Mesh& mesh = doc.meshes[meshIndex];
+	const fx::gltf::Primitive& primitive = mesh.primitives[primitveIndex];
 
 	for (auto const& attrib : primitive.attributes)
 	{

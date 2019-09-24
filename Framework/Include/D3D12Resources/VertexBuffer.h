@@ -10,7 +10,7 @@ public:
 
 	virtual void CreateViews(size_t numElements, size_t elementSize) override;
 
-	void CreateViews(std::vector<size_t> numElements, std::vector<size_t> elementSize);
+	void CreateViews(std::vector<uint32_t> numElements, std::vector<uint32_t> elementSize);
 
 	/**
 	 * Get the vertex buffer view for binding to the Input Assembler stage.
@@ -20,7 +20,7 @@ public:
 		return m_VertexBufferViews;
 	}
 
-	size_t GetNumVertices() const
+	uint32_t GetNumVertices() const
 	{
 		return m_NumVertices;
 	}
@@ -37,8 +37,8 @@ public:
 	virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(const D3D12_UNORDERED_ACCESS_VIEW_DESC* uavDesc = nullptr) const override;
 protected:
 private:
-	size_t m_NumVertices;
-	size_t m_VertexStride;
+	uint32_t m_NumVertices;
+	uint32_t m_VertexStride;
 
 	uint32_t m_GPUOffset;
 

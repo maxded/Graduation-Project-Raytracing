@@ -5,7 +5,6 @@
 #include <IndexBuffer.h>
 #include <Light.h>
 #include <Window.h>
-#include <StaticMesh.h>
 #include <RenderTarget.h>
 #include <RootSignature.h>
 #include <Texture.h>
@@ -13,7 +12,6 @@
 
 #include <DirectXMath.h>
 
-class StaticMesh;
 class Model;
 
 class HybridRayTracingDemo : public Game
@@ -63,12 +61,6 @@ protected:
 
 private:
 	// Some geometry to render.
-	std::unique_ptr<StaticMesh> m_CubeMesh;
-	std::unique_ptr<StaticMesh> m_SphereMesh;
-	std::unique_ptr<StaticMesh> m_ConeMesh;
-	std::unique_ptr<StaticMesh> m_TorusMesh;
-	std::unique_ptr<StaticMesh> m_PlaneMesh;
-
 	std::unique_ptr<Model> m_Model;
 
 	// HDR Render target

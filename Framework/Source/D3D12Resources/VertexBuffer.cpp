@@ -25,14 +25,14 @@ void VertexBuffer::CreateViews(size_t numElements, size_t elementSize)
 	m_VertexBufferViews[0].StrideInBytes	= static_cast<UINT>(m_VertexStride);
 }
 
-void VertexBuffer::CreateViews(std::vector<size_t> numElements, std::vector<size_t> elementSize)
+void VertexBuffer::CreateViews(std::vector<uint32_t> numElements, std::vector<uint32_t> elementSize)
 {
 	m_VertexBufferViews.resize(numElements.size());
 
 	for (int i = 0; i < numElements.size(); i++)
 	{
-		size_t numVertices	= numElements[i];
-		size_t elemSize		= elementSize[i];
+		uint32_t numVertices	= numElements[i];
+		uint32_t elemSize		= elementSize[i];
 
 		m_VertexBufferViews[i].BufferLocation	= m_d3d12Resource->GetGPUVirtualAddress() + m_GPUOffset;
 		m_VertexBufferViews[i].SizeInBytes		= static_cast<UINT>(numVertices * elemSize);

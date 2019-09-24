@@ -16,6 +16,7 @@ struct Material
 		, Diffuse(diffuse)
 		, Specular(specular)
 		, SpecularPower(specularPower)
+		, Padding{0, 0, 0}
 	{}
 
 	DirectX::XMFLOAT4 Emissive;

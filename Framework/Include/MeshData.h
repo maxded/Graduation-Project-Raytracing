@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gltf.h>
+#include <d3d12.h>
 
 class MeshData
 {
@@ -20,27 +21,27 @@ public:
 		}
 	};
 
-	BufferInfo const& IndexBuffer() const noexcept
+	const BufferInfo& IndexBuffer() const noexcept
 	{
 		return m_indexBuffer;
 	}
 
-	BufferInfo const& VertexBuffer() const noexcept
+	const BufferInfo& VertexBuffer() const noexcept
 	{
 		return m_vertexBuffer;
 	}
 
-	BufferInfo const& NormalBuffer() const noexcept
+	const BufferInfo& NormalBuffer() const noexcept
 	{
 		return m_normalBuffer;
 	}
 
-	BufferInfo const& TangentBuffer() const noexcept
+	const BufferInfo& TangentBuffer() const noexcept
 	{
 		return m_tangentBuffer;
 	}
 
-	BufferInfo const& TexCoord0Buffer() const noexcept
+	const BufferInfo& TexCoord0Buffer() const noexcept
 	{
 		return m_texCoord0Buffer;
 	}

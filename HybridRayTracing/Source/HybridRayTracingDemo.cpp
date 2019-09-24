@@ -5,7 +5,6 @@
 #include <CommandList.h>
 #include <Helpers.h>
 #include <Window.h>
-#include <StaticMesh.h>
 #include <Material.h>
 #include <Model.h>
 
@@ -182,13 +181,7 @@ bool HybridRayTracingDemo::LoadContent()
 	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto commandList	= commandQueue->GetCommandList();
 
-	m_Model = Model::LoadModel("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
-
-	m_CubeMesh		= StaticMesh::CreateCube(*commandList);
-	m_SphereMesh	= StaticMesh::CreateSphere(*commandList);
-	m_ConeMesh		= StaticMesh::CreateCone(*commandList);
-	m_TorusMesh		= StaticMesh::CreateTorus(*commandList);
-	m_PlaneMesh		= StaticMesh::CreatePlane(*commandList);
+	m_Model = Model::LoadModel("C:\\Users\\mdans\\OneDrive\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
 
 	// Create an HDR intermediate render target.
 	DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -488,26 +481,19 @@ void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 	commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, m_SpotLights);
 
 	// Draw the earth sphere
-	XMMATRIX translationMatrix	  = XMMatrixTranslation(-4.0f, 2.0f, -4.0f);
+	XMMATRIX translationMatrix	  = XMMatrixIdentity();
 	XMMATRIX rotationMatrix		  = XMMatrixIdentity();
-	XMMATRIX scaleMatrix		  = XMMatrixScaling(4.0f, 4.0f, 4.0f);
+	XMMATRIX scaleMatrix		  = XMMatrixIdentity();
 	XMMATRIX worldMatrix		  = scaleMatrix * rotationMatrix * translationMatrix;
 	XMMATRIX viewMatrix			  = m_Camera.get_ViewMatrix();
 	XMMATRIX viewProjectionMatrix = viewMatrix * m_Camera.get_ProjectionMatrix();
 
 	Mat matrices;
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
 
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Gold);
-
-	m_SphereMesh->Render(*commandList);
-
-	// Draw a cube
-	translationMatrix = XMMatrixIdentity();
-	rotationMatrix = XMMatrixIdentity();
-	scaleMatrix = XMMatrixIdentity();
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+	// Draw a model
+	//translationMatrix	= XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+	//scaleMatrix			= XMMatrixScaling(3.0f, 3.0f, 3.0f);
+	//worldMatrix			= scaleMatrix * rotationMatrix * translationMatrix;
 
 	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
 
@@ -515,130 +501,6 @@ void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Ruby);
 
 	m_Model->Render(*commandList);
-
-	// Draw a torus
-	translationMatrix = XMMatrixTranslation(4.0f, 0.6f, -4.0f);
-	rotationMatrix = XMMatrixRotationY(XMConvertToRadians(0.0f));
-	scaleMatrix = XMMatrixScaling(4.0f, 4.0f, 4.0f);
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Silver);
-
-	m_TorusMesh->Render(*commandList);
-
-	// Floor plane.
-	float scalePlane = 20.0f;
-	float translateOffset = scalePlane / 2.0f;
-
-	translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-	rotationMatrix = XMMatrixIdentity();
-	scaleMatrix = XMMatrixScaling(scalePlane, 1.0f, scalePlane);
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Magenta);
-
-	m_PlaneMesh->Render(*commandList);
-
-	// Back wall
-	translationMatrix = XMMatrixTranslation(0, translateOffset, translateOffset);
-	rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90));
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Blue);
-
-	m_PlaneMesh->Render(*commandList);
-
-	// Ceiling plane
-	translationMatrix = XMMatrixTranslation(0, translateOffset * 2.0f, 0);
-	rotationMatrix = XMMatrixRotationX(XMConvertToRadians(180));
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Yellow);
-
-	m_PlaneMesh->Render(*commandList);
-
-	// Front wall
-	translationMatrix = XMMatrixTranslation(0, translateOffset, -translateOffset);
-	rotationMatrix = XMMatrixRotationX(XMConvertToRadians(90));
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Jade);
-
-	m_PlaneMesh->Render(*commandList);
-
-	// Left wall
-	translationMatrix = XMMatrixTranslation(-translateOffset, translateOffset, 0);
-	rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90)) * XMMatrixRotationY(XMConvertToRadians(-90));
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Red);
-
-	m_PlaneMesh->Render(*commandList);
-
-	// Right wall
-	translationMatrix = XMMatrixTranslation(translateOffset, translateOffset, 0);
-	rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90)) * XMMatrixRotationY(XMConvertToRadians(90));
-	worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Green);
-	m_PlaneMesh->Render(*commandList);
-
-	// Draw shapes to visualize the position of the lights in the scene.
-	Material lightMaterial;
-	// No specular
-	lightMaterial.Specular = { 0, 0, 0, 1 };
-	for (const auto& l : m_PointLights)
-	{
-		lightMaterial.Emissive = l.Color;
-		XMVECTOR lightPos = XMLoadFloat4(&l.PositionWS);
-		worldMatrix = XMMatrixTranslationFromVector(lightPos);
-		ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-		commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-		commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, lightMaterial);
-
-		m_SphereMesh->Render(*commandList);
-	}
-
-	for (const auto& l : m_SpotLights)
-	{
-		lightMaterial.Emissive = l.Color;
-		XMVECTOR lightPos = XMLoadFloat4(&l.PositionWS);
-		XMVECTOR lightDir = XMLoadFloat4(&l.DirectionWS);
-		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
-
-		// Rotate the cone so it is facing the Z axis.
-		rotationMatrix = XMMatrixRotationX(XMConvertToRadians(-90.0f));
-		worldMatrix = rotationMatrix * LookAtMatrix(lightPos, lightDir, up);
-
-		ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-		commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
-		commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, lightMaterial);
-
-		m_ConeMesh->Render(*commandList);
-	}
 
 	// Perform HDR -> SDR tonemapping directly to the Window's render target.
 	commandList->SetRenderTarget(m_pWindow->GetRenderTarget());

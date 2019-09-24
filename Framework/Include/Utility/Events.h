@@ -80,6 +80,8 @@ public:
 		, Shift(shift)
 		, X(x)
 		, Y(y)
+		, RelX(0)
+		, RelY(0)
 	{}
 
 	bool LeftButton;    // Is the left mouse button down?

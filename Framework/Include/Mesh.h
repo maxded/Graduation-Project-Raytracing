@@ -11,12 +11,14 @@ class Mesh
 	friend class Model;
 public:
 	Mesh();
-	//Mesh(const Mesh& copy) = delete;
-	virtual ~Mesh();
+	~Mesh();
 
 	static std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 
 protected:
+
+	//Mesh(const Mesh& copy) = delete;
+
 	void Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandList& commandList);
 
 	void Render(CommandList& commandlist);
@@ -26,7 +28,9 @@ private:
 		VertexBuffer m_VertexBuffer;
 		IndexBuffer  m_IndexBuffer;
 
-		UINT m_IndexCount;
+		UINT m_IndexCount = 0;
+
+		D3D_PRIMITIVE_TOPOLOGY m_Topology;
 	};
 
 	std::vector<SubMesh> m_SubMeshes;
