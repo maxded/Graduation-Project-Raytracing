@@ -141,7 +141,7 @@ bool HybridRayTracingDemo::LoadContent()
 	auto commandList	= commandQueue->GetCommandList();
 
 	m_Scenes = std::unique_ptr<Scenes>(new Scenes);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\OrientationTest.gltf", *commandList);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
 
 	// Create an HDR intermediate render target.
 	DXGI_FORMAT HDRFormat			= DXGI_FORMAT_R16G16B16A16_FLOAT;

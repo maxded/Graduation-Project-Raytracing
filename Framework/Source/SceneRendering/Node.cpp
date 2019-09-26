@@ -6,7 +6,7 @@ using namespace DirectX;
 
 Node::Node()
 	: m_MeshIndex(-1)
-	, m_LocalTransform()
+	, m_LocalTransform(XMMatrixIdentity())
 	, m_Name("Node")
 {
 

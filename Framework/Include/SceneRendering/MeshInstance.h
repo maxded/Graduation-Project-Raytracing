@@ -5,6 +5,5 @@
 struct MeshInstance
 {
 	DirectX::XMMATRIX Transform;
-
 	int32_t MeshIndex;
 };

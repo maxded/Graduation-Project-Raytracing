@@ -37,7 +37,7 @@ void Scenes::LoadFromFile(const std::string& filename, CommandList& commandList)
 		m_Meshes[i].Load(document, i, commandList);
 	}
 
-	const XMMATRIX rootTransform = DirectX::XMMatrixMultiply(DirectX::XMMatrixIdentity(), DirectX::XMMatrixScaling(1, 1, 1));
+	const XMMATRIX rootTransform = XMMatrixIdentity();
 
 	// Generate scenes and nodes
 	for (int i = 0; i < document.scenes.size(); ++i)

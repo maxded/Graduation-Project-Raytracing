@@ -49,10 +49,10 @@ private:
 	struct ConstantData
 	{
 		ConstantData()
-			: m_ModelMatrix{}
-			, m_ModelViewMatrix{}
-			, m_InverseTransposeModelViewMatrix{}
-			, m_ModelViewProjectionMatrix{}
+			: m_ModelMatrix{ DirectX::XMMatrixIdentity() }
+			, m_ModelViewMatrix{ DirectX::XMMatrixIdentity() }
+			, m_InverseTransposeModelViewMatrix{ DirectX::XMMatrixIdentity() }
+			, m_ModelViewProjectionMatrix{ DirectX::XMMatrixIdentity() }
 		{}
 
 		DirectX::XMMATRIX m_ModelMatrix;

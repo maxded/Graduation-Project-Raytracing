@@ -10,7 +10,7 @@ Mesh::Mesh()
 	: m_SubMeshes{}
 	, m_Name("unavailable")
 	, m_Data{}
-	, m_BaseTransform{}
+	, m_BaseTransform{ XMMatrixIdentity() }
 {
 	
 }
