@@ -13,14 +13,20 @@ public:
 	Mesh();
 	~Mesh();
 
-	static std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
+	void SetWorldMatrix(const DirectX::XMFLOAT3& translation, const DirectX::XMVECTOR& quaternion, float scale);
+	void SetWorldMatrix(const DirectX::XMMATRIX& worldMatrix);
+
+	static const UINT VertexSlot	= 0;
+	static const UINT NormalSlot	= 1;
+	static const UINT TangentSlot	= 2;
+	static const UINT Texcoord0Slot	= 3;
 
 protected:
 	void Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandList& commandList);
 
 	void Render(CommandList& commandlist);
 
-	void SetModelMatrix(DirectX::XMMATRIX modelMatrix);
+	void SetBaseTransform(DirectX::XMMATRIX baseTransform);
 private:
 	std::string m_Name;
 
@@ -56,4 +62,6 @@ private:
 	};
 
 	ConstantData m_Data;
+
+	DirectX::XMMATRIX m_BaseTransform;
 };

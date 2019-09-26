@@ -27,14 +27,6 @@ using namespace DirectX;
 #include <DirectXColors.h>
 #include <DirectXMath.h>
 
-std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout =
-{
-	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-};
-
 struct LightProperties
 {
 	uint32_t NumPointLights;
@@ -233,6 +225,14 @@ bool HybridRayTracingDemo::LoadContent()
 			CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
 			CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
 		} hdrPipelineStateStream;
+
+		std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, Mesh::VertexSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, Mesh::NormalSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, Mesh::TangentSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, Mesh::Texcoord0Slot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		};
 
 		hdrPipelineStateStream.pRootSignature			= m_HDRRootSignature.GetRootSignature().Get();
 		hdrPipelineStateStream.InputLayout				= { &inputLayout[0], static_cast<UINT>(inputLayout.size()) };

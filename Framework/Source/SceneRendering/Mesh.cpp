@@ -10,6 +10,7 @@ Mesh::Mesh()
 	: m_SubMeshes{}
 	, m_Name("unavailable")
 	, m_Data{}
+	, m_BaseTransform{}
 {
 	
 }
@@ -17,6 +18,20 @@ Mesh::Mesh()
 Mesh::~Mesh()
 {
 
+}
+
+void Mesh::SetWorldMatrix(const DirectX::XMFLOAT3& translation, const DirectX::XMVECTOR& quaternion, float scale)
+{
+	const XMMATRIX t = XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&translation));
+	const XMMATRIX r = XMMatrixRotationQuaternion(quaternion);
+	const XMMATRIX s = XMMatrixScaling(scale, scale, scale);
+
+	m_Data.m_ModelMatrix = m_BaseTransform * t * r * s;
+}
+
+void Mesh::SetWorldMatrix(const DirectX::XMMATRIX& worldMatrix)
+{
+	m_Data.m_ModelMatrix = m_BaseTransform * worldMatrix;
 }
 
 void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandList& commandList)
@@ -143,10 +158,9 @@ void Mesh::Render(CommandList& commandList)
 {
 	Camera& camera = Camera::Get();
 
-	XMMATRIX model						= m_Data.m_ModelMatrix;
-	XMMATRIX modelView					= model * camera.get_ViewMatrix();
+	XMMATRIX modelView					= m_Data.m_ModelMatrix * camera.get_ViewMatrix();
 	XMMATRIX inverseTransposeModelView	= XMMatrixTranspose(XMMatrixInverse(nullptr, modelView));
-	XMMATRIX modelViewProjection		= model * camera.get_ViewMatrix() * camera.get_ProjectionMatrix();
+	XMMATRIX modelViewProjection		= m_Data.m_ModelMatrix * camera.get_ViewMatrix() * camera.get_ProjectionMatrix();
 	
 	m_Data.m_ModelViewMatrix				 = modelView;
 	m_Data.m_InverseTransposeModelViewMatrix = inverseTransposeModelView;
@@ -171,8 +185,9 @@ void Mesh::Render(CommandList& commandList)
 	}
 }
 
-void Mesh::SetModelMatrix(DirectX::XMMATRIX modelMatrix)
+void Mesh::SetBaseTransform(DirectX::XMMATRIX baseTransform)
 {
-	m_Data.m_ModelMatrix = modelMatrix;	
+	m_BaseTransform			= baseTransform;
+	m_Data.m_ModelMatrix	= m_BaseTransform;
 }
 

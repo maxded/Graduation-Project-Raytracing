@@ -54,6 +54,13 @@ void Scenes::LoadFromFile(const std::string& filename, CommandList& commandList)
 
 			m_Scenes[i].m_SceneNodes.push_back(node);
 		}
+
+		// Set base transform for all mesh instances
+		for (auto& instance : m_Scenes[i].m_Instances)
+		{
+			Mesh& mesh = m_Meshes[instance.MeshIndex];
+			mesh.SetBaseTransform(instance.Transform);
+		}
 	}
 
 	if (document.scene > -1)
@@ -68,7 +75,6 @@ void Scenes::RenderCurrentScene(CommandList& commandList)
 	for (auto& instance : m_CurrentScene->m_Instances)
 	{
 		Mesh& mesh = m_Meshes[instance.MeshIndex];
-		mesh.SetModelMatrix(instance.Transform);
 		mesh.Render(commandList);
 	}
 }
