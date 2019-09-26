@@ -6,7 +6,7 @@
 
 #include <d3dx12.h>
 
-ConstantBuffer::ConstantBuffer(const std::wstring& name)
+ConstantBuffer::ConstantBuffer(const std::string& name)
 	: Buffer(name)
 	, m_SizeInBytes(0)
 {

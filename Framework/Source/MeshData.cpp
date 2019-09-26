@@ -51,7 +51,7 @@ uint32_t MeshData::CalculateDataTypeSize(fx::gltf::Accessor const& accessor) noe
 	{
 	case fx::gltf::Accessor::ComponentType::Byte:
 	case fx::gltf::Accessor::ComponentType::UnsignedByte:
-		elementSize = 1;
+		elementSize = 2;
 		break;
 	case fx::gltf::Accessor::ComponentType::Short:
 	case fx::gltf::Accessor::ComponentType::UnsignedShort:

@@ -6,7 +6,7 @@
 class ConstantBuffer : public Buffer
 {
 public:
-	ConstantBuffer(const std::wstring& name = L"");
+	ConstantBuffer(const std::string& name = "Constant Buffer");
 	virtual ~ConstantBuffer();
 
 	// Inherited from Buffer

@@ -67,6 +67,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -76,6 +77,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\Application.h" />
+    <ClInclude Include="Include\Camera.h" />
     <ClInclude Include="Include\CommandList.h" />
     <ClInclude Include="Include\CommandQueue.h" />
     <ClInclude Include="Include\D3D12Resources\Buffer.h" />
@@ -92,7 +94,8 @@
     <ClInclude Include="Include\Game.h" />
     <ClInclude Include="Include\Mesh.h" />
     <ClInclude Include="Include\MeshData.h" />
-    <ClInclude Include="Include\Model.h" />
+    <ClInclude Include="Include\MeshInstance.h" />
+    <ClInclude Include="Include\Node.h" />
     <ClInclude Include="Include\RenderTarget.h" />
     <ClInclude Include="Include\ResourceManagement\DescriptorAllocation.h" />
     <ClInclude Include="Include\ResourceManagement\DescriptorAllocatorPage.h" />
@@ -100,6 +103,7 @@
     <ClInclude Include="Include\ResourceManagement\DynamicDescriptorHeap.h" />
     <ClInclude Include="Include\ResourceManagement\ResourceStateTracker.h" />
     <ClInclude Include="Include\RootSignature.h" />
+    <ClInclude Include="Include\Scenes.h" />
     <ClInclude Include="Include\TextureUsage.h" />
     <ClInclude Include="Include\ThreadSafeQueue.h" />
     <ClInclude Include="Include\UploadBuffer.h" />
@@ -113,6 +117,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Application.cpp" />
+    <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\CommandList.cpp" />
     <ClCompile Include="Source\CommandQueue.cpp" />
     <ClCompile Include="Source\D3D12Resources\Buffer.cpp" />
@@ -126,7 +131,7 @@
     <ClCompile Include="Source\Game.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />
     <ClCompile Include="Source\MeshData.cpp" />
-    <ClCompile Include="Source\Model.cpp" />
+    <ClCompile Include="Source\Node.cpp" />
     <ClCompile Include="Source\RenderTarget.cpp" />
     <ClCompile Include="Source\ResourceManagement\DescriptorAllocation.cpp" />
     <ClCompile Include="Source\ResourceManagement\DescriptorAllocator.cpp" />
@@ -134,6 +139,7 @@
     <ClCompile Include="Source\ResourceManagement\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="Source\ResourceManagement\ResourceStateTracker.cpp" />
     <ClCompile Include="Source\RootSignature.cpp" />
+    <ClCompile Include="Source\Scenes.cpp" />
     <ClCompile Include="Source\UploadBuffer.cpp" />
     <ClCompile Include="Source\Utility\HighResolutionClock.cpp" />
     <ClCompile Include="Source\Window.cpp" />

@@ -8,11 +8,11 @@
 class Resource
 {
 public:
-	explicit Resource(const std::wstring& name = L"");
+	explicit Resource(const std::string& name = "");
 	explicit Resource(const D3D12_RESOURCE_DESC& resourceDesc,
 		const D3D12_CLEAR_VALUE* clearValue = nullptr,
-		const std::wstring& name = L"");
-	explicit Resource(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const std::wstring& name = L"");
+		const std::string& name = "");
+	explicit Resource(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const std::string& name = "");
 
 	Resource(const Resource& copy);
 	Resource(Resource&& copy);
@@ -73,7 +73,7 @@ public:
 	 * The name of the resource will persist if the underlying D3D12 resource is
 	 * replaced with SetD3D12Resource.
 	 */
-	void SetName(const std::wstring& name);
+	void SetName(const std::string& name);
 
 	/**
 	 * Release the underlying resource.
@@ -93,7 +93,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_d3d12Resource;
 	D3D12_FEATURE_DATA_FORMAT_SUPPORT m_FormatSupport;
 	std::unique_ptr<D3D12_CLEAR_VALUE> m_d3d12ClearValue;
-	std::wstring m_ResourceName;
+	std::string m_ResourceName;
 
 private:
 	// Check the format support and populate the m_FormatSupport structure.

@@ -1,24 +1,15 @@
 #pragma once
 
-#include <Camera.h>
 #include <Game.h>
-#include <IndexBuffer.h>
 #include <Light.h>
-#include <Window.h>
 #include <RenderTarget.h>
 #include <RootSignature.h>
-#include <Texture.h>
-#include <VertexBuffer.h>
 
-#include <DirectXMath.h>
-
-class Model;
+class Scenes;
 
 class HybridRayTracingDemo : public Game
 {
 public:
-	using game = Game;
-
 	HybridRayTracingDemo(const std::wstring& name, int width, int height, bool vSync = false);
 	virtual ~HybridRayTracingDemo();
 
@@ -58,10 +49,9 @@ protected:
 
 	void RescaleHDRRenderTarget(float scale);
 
-
 private:
-	// Some geometry to render.
-	std::unique_ptr<Model> m_Model;
+	// All scenes
+	std::unique_ptr<Scenes>	m_Scenes;
 
 	// HDR Render target
 	RenderTarget m_HDRRenderTarget;
@@ -76,26 +66,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_SDRPipelineState;
 
 	D3D12_RECT m_ScissorRect;
-
-	Camera m_Camera;
-	struct alignas(16) CameraData
-	{
-		DirectX::XMVECTOR m_InitialCamPos;
-		DirectX::XMVECTOR m_InitialCamRot;
-		float m_InitialFov;
-	};
-	CameraData* m_pAlignedCameraData;
-
-	// Camera controller
-	float m_Forward;
-	float m_Backward;
-	float m_Left;
-	float m_Right;
-	float m_Up;
-	float m_Down;
-
-	float m_Pitch;
-	float m_Yaw;
 
 	// Rotate the lights in a circle.
 	bool m_AnimateLights;

@@ -9,7 +9,7 @@ class MeshData
 public:
 	struct BufferInfo
 	{
-		fx::gltf::Accessor const* Accessor;
+		const fx::gltf::Accessor* Accessor;
 
 		uint8_t const* Data;
 		uint32_t DataStride;

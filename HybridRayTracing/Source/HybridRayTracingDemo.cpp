@@ -3,10 +3,11 @@
 #include <Application.h>
 #include <CommandQueue.h>
 #include <CommandList.h>
-#include <Helpers.h>
 #include <Window.h>
 #include <Material.h>
-#include <Model.h>
+#include <Camera.h>
+#include <Scenes.h>
+#include <Helpers.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -32,14 +33,6 @@ std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout =
 	{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	{ "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-};
-
-struct Mat
-{
-	XMMATRIX ModelMatrix;
-	XMMATRIX ModelViewMatrix;
-	XMMATRIX InverseTransposeModelViewMatrix;
-	XMMATRIX ModelViewProjectionMatrix;
 };
 
 struct LightProperties
@@ -112,13 +105,6 @@ enum RootParameters
 	NumRootParameters
 };
 
-// Clamp a value between a min and max range.
-template<typename T>
-constexpr const T& clamp(const T& val, const T& min = T(0), const T& max = T(1))
-{
-	return val < min ? min : val > max ? max : val;
-}
-
 // Builds a look-at (world) matrix from a point, up and direction vectors.
 XMMATRIX XM_CALLCONV LookAtMatrix(FXMVECTOR Position, FXMVECTOR Direction, FXMVECTOR Up)
 {
@@ -140,39 +126,20 @@ XMMATRIX XM_CALLCONV LookAtMatrix(FXMVECTOR Position, FXMVECTOR Direction, FXMVE
 }
 
 HybridRayTracingDemo::HybridRayTracingDemo(const std::wstring& name, int width, int height, bool vSync)
-	: game(name, width, height, vSync)
+	: Game(name, width, height, vSync)
 	, m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
-	, m_Forward(0)
-	, m_Backward(0)
-	, m_Left(0)
-	, m_Right(0)
-	, m_Up(0)
-	, m_Down(0)
-	, m_Pitch(0)
-	, m_Yaw(0)
 	, m_AnimateLights(false)
 	, m_Shift(false)
 	, m_Width(width)
 	, m_Height(height)
 	, m_RenderScale(1.0f)
 {
-	XMVECTOR cameraPos		= XMVectorSet(0, 5, -20, 1);
-	XMVECTOR cameraTarget	= XMVectorSet(0, 5, 0, 1);
-	XMVECTOR cameraUp		= XMVectorSet(0, 1, 0, 0);
 
-	m_Camera.set_LookAt(cameraPos, cameraTarget, cameraUp);
-	m_Camera.set_Projection(45.0f, width / (float)height, 0.1f, 100.0f);
-
-	m_pAlignedCameraData = (CameraData*)_aligned_malloc(sizeof(CameraData), 16);
-
-	m_pAlignedCameraData->m_InitialCamPos = m_Camera.get_Translation();
-	m_pAlignedCameraData->m_InitialCamRot = m_Camera.get_Rotation();
-	m_pAlignedCameraData->m_InitialFov	  = m_Camera.get_FoV();
 }
 
 HybridRayTracingDemo::~HybridRayTracingDemo()
 {
-	_aligned_free(m_pAlignedCameraData);
+	
 }
 
 bool HybridRayTracingDemo::LoadContent()
@@ -181,14 +148,15 @@ bool HybridRayTracingDemo::LoadContent()
 	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto commandList	= commandQueue->GetCommandList();
 
-	m_Model = Model::LoadModel("C:\\Users\\mdans\\OneDrive\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
+	m_Scenes = std::unique_ptr<Scenes>(new Scenes);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\OrientationTest.gltf", *commandList);
 
 	// Create an HDR intermediate render target.
-	DXGI_FORMAT HDRFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT;
+	DXGI_FORMAT HDRFormat			= DXGI_FORMAT_R16G16B16A16_FLOAT;
+	DXGI_FORMAT depthBufferFormat	= DXGI_FORMAT_D32_FLOAT;
 
 	// Create an off-screen render target with a single color buffer and a depth buffer.
-	auto colorDesc = CD3DX12_RESOURCE_DESC::Tex2D(HDRFormat, m_Width, m_Height);
+	auto colorDesc  = CD3DX12_RESOURCE_DESC::Tex2D(HDRFormat, m_Width, m_Height);
 	colorDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
 	D3D12_CLEAR_VALUE colorClearValue;
@@ -200,7 +168,7 @@ bool HybridRayTracingDemo::LoadContent()
 
 	Texture HDRTexture = Texture(colorDesc, &colorClearValue,
 		TextureUsage::RenderTarget,
-		L"HDR Texture");
+		"HDR Texture");
 
 	// Create a depth buffer for the HDR render target.
 	auto depthDesc = CD3DX12_RESOURCE_DESC::Tex2D(depthBufferFormat, m_Width, m_Height);
@@ -212,7 +180,7 @@ bool HybridRayTracingDemo::LoadContent()
 
 	Texture depthTexture = Texture(depthDesc, &depthClearValue,
 		TextureUsage::Depth,
-		L"Depth Render Target");
+		"Depth Render Target");
 
 	// Attach the HDR texture to the HDR render target.
 	m_HDRRenderTarget.AttachTexture(AttachmentPoint::Color0, HDRTexture);
@@ -345,10 +313,10 @@ void HybridRayTracingDemo::OnUpdate(UpdateEventArgs& e)
 	static uint64_t frameCount = 0;
 	static double totalTime = 0.0;
 
-	game::OnUpdate(e);
-
 	totalTime += e.ElapsedTime;
 	frameCount++;
+
+	Game::OnUpdate(e);
 
 	if (totalTime > 1.0)
 	{
@@ -362,18 +330,9 @@ void HybridRayTracingDemo::OnUpdate(UpdateEventArgs& e)
 		totalTime = 0.0;
 	}
 
-	// Update the camera.
-	float speedMultipler = (m_Shift ? 16.0f : 4.0f);
+	Camera& camera = Camera::Get();
 
-	XMVECTOR cameraTranslate = XMVectorSet(m_Right - m_Left, 0.0f, m_Forward - m_Backward, 1.0f) * speedMultipler * static_cast<float>(e.ElapsedTime);
-	XMVECTOR cameraPan = XMVectorSet(0.0f, m_Up - m_Down, 0.0f, 1.0f) * speedMultipler * static_cast<float>(e.ElapsedTime);
-	m_Camera.Translate(cameraTranslate, Space::Local);
-	m_Camera.Translate(cameraPan, Space::Local);
-
-	XMVECTOR cameraRotation = XMQuaternionRotationRollPitchYaw(XMConvertToRadians(m_Pitch), XMConvertToRadians(m_Yaw), 0.0f);
-	m_Camera.set_Rotation(cameraRotation);
-
-	XMMATRIX viewMatrix = m_Camera.get_ViewMatrix();
+	XMMATRIX viewMatrix = camera.get_ViewMatrix();
 
 	const int numPointLights = 4;
 	const int numSpotLights = 4;
@@ -441,20 +400,14 @@ void HybridRayTracingDemo::OnUpdate(UpdateEventArgs& e)
 	}
 }
 
-void XM_CALLCONV ComputeMatrices(FXMMATRIX model, CXMMATRIX view, CXMMATRIX viewProjection, Mat& mat)
-{
-	mat.ModelMatrix = model;
-	mat.ModelViewMatrix = model * view;
-	mat.InverseTransposeModelViewMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, mat.ModelViewMatrix));
-	mat.ModelViewProjectionMatrix = model * viewProjection;
-}
-
 void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 {
-	game::OnRender(e);
+	Game::OnRender(e);
 
 	auto commandQueue = Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto commandList = commandQueue->GetCommandList();
+
+	Camera& camera = Camera::Get();
 
 	// Clear the render targets.
 	{
@@ -480,27 +433,9 @@ void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 	commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, m_PointLights);
 	commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, m_SpotLights);
 
-	// Draw the earth sphere
-	XMMATRIX translationMatrix	  = XMMatrixIdentity();
-	XMMATRIX rotationMatrix		  = XMMatrixIdentity();
-	XMMATRIX scaleMatrix		  = XMMatrixIdentity();
-	XMMATRIX worldMatrix		  = scaleMatrix * rotationMatrix * translationMatrix;
-	XMMATRIX viewMatrix			  = m_Camera.get_ViewMatrix();
-	XMMATRIX viewProjectionMatrix = viewMatrix * m_Camera.get_ProjectionMatrix();
-
-	Mat matrices;
-
-	// Draw a model
-	//translationMatrix	= XMMatrixTranslation(0.0f, 0.0f, 0.0f);
-	//scaleMatrix			= XMMatrixScaling(3.0f, 3.0f, 3.0f);
-	//worldMatrix			= scaleMatrix * rotationMatrix * translationMatrix;
-
-	ComputeMatrices(worldMatrix, viewMatrix, viewProjectionMatrix, matrices);
-
-	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MatricesCB, matrices);
 	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Ruby);
 
-	m_Model->Render(*commandList);
+	m_Scenes->RenderCurrentScene(*commandList);
 
 	// Perform HDR -> SDR tonemapping directly to the Window's render target.
 	commandList->SetRenderTarget(m_pWindow->GetRenderTarget());
@@ -521,7 +456,7 @@ void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 
 void HybridRayTracingDemo::OnKeyPressed(KeyEventArgs& e)
 {
-	game::OnKeyPressed(e);
+	Game::OnKeyPressed(e);
 
 	switch (e.Key)
 	{
@@ -540,36 +475,6 @@ void HybridRayTracingDemo::OnKeyPressed(KeyEventArgs& e)
 	case KeyCode::V:
 		m_pWindow->ToggleVSync();
 		break;
-	case KeyCode::R:
-		// Reset camera transform
-		m_Camera.set_Translation(m_pAlignedCameraData->m_InitialCamPos);
-		m_Camera.set_Rotation(m_pAlignedCameraData->m_InitialCamRot);
-		m_Camera.set_FoV(m_pAlignedCameraData->m_InitialFov);
-		m_Pitch = 0.0f;
-		m_Yaw = 0.0f;
-		break;
-	case KeyCode::Up:
-	case KeyCode::W:
-		m_Forward = 1.0f;
-		break;
-	case KeyCode::Left:
-	case KeyCode::A:
-		m_Left = 1.0f;
-		break;
-	case KeyCode::Down:
-	case KeyCode::S:
-		m_Backward = 1.0f;
-		break;
-	case KeyCode::Right:
-	case KeyCode::D:
-		m_Right = 1.0f;
-		break;
-	case KeyCode::Q:
-		m_Down = 1.0f;
-		break;
-	case KeyCode::E:
-		m_Up = 1.0f;
-		break;
 	case KeyCode::Space:
 		m_AnimateLights = !m_AnimateLights;
 		break;
@@ -581,33 +486,10 @@ void HybridRayTracingDemo::OnKeyPressed(KeyEventArgs& e)
 
 void HybridRayTracingDemo::OnKeyReleased(KeyEventArgs& e)
 {
-	game::OnKeyReleased(e);
+	Game::OnKeyReleased(e);
 
 	switch (e.Key)
 	{
-	case KeyCode::Enter:
-	case KeyCode::Up:
-	case KeyCode::W:
-		m_Forward = 0.0f;
-		break;
-	case KeyCode::Left:
-	case KeyCode::A:
-		m_Left = 0.0f;
-		break;
-	case KeyCode::Down:
-	case KeyCode::S:
-		m_Backward = 0.0f;
-		break;
-	case KeyCode::Right:
-	case KeyCode::D:
-		m_Right = 0.0f;
-		break;
-	case KeyCode::Q:
-		m_Down = 0.0f;
-		break;
-	case KeyCode::E:
-		m_Up = 0.0f;
-		break;
 	case KeyCode::ShiftKey:
 		m_Shift = false;
 		break;
@@ -616,33 +498,32 @@ void HybridRayTracingDemo::OnKeyReleased(KeyEventArgs& e)
 
 void HybridRayTracingDemo::OnMouseMoved(MouseMotionEventArgs& e)
 {
-	game::OnMouseMoved(e);
-
+	Game::OnMouseMoved(e);
 }
 
 void HybridRayTracingDemo::OnMouseWheel(MouseWheelEventArgs& e)
 {
-	game::OnMouseWheel(e);
+	Game::OnMouseWheel(e);
 }
-
 
 void HybridRayTracingDemo::OnResize(ResizeEventArgs& e)
 {
-	game::OnResize(e);
+	Game::OnResize(e);
+
+	Camera& camera = Camera::Get();
 
 	if (m_Width != e.Width || m_Height != e.Height)
 	{
 		m_Width  = std::max(1, e.Width);
 		m_Height = std::max(1, e.Height);
 
-		float fov = m_Camera.get_FoV();
+		float fov = camera.get_FoV();
 		float aspectRatio = m_Width / (float)m_Height;
-		m_Camera.set_Projection(fov, aspectRatio, 0.1f, 100.0f);
+		camera.set_Projection(fov, aspectRatio, 0.1f, 100.0f);
 
 		RescaleHDRRenderTarget(m_RenderScale);
 	}
 }
-
 
 void HybridRayTracingDemo::RescaleHDRRenderTarget(float scale)
 {

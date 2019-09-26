@@ -6,7 +6,7 @@
 #include <Helpers.h>
 #include <ResourceStateTracker.h>
 
-Texture::Texture(TextureUsage textureUsage, const std::wstring& name)
+Texture::Texture(TextureUsage textureUsage, const std::string& name)
 	: Resource(name)
 	, m_TextureUsage(textureUsage)
 {
@@ -15,7 +15,7 @@ Texture::Texture(TextureUsage textureUsage, const std::wstring& name)
 Texture::Texture(const D3D12_RESOURCE_DESC& resourceDesc,
 	const D3D12_CLEAR_VALUE* clearValue,
 	TextureUsage textureUsage,
-	const std::wstring& name)
+	const std::string& name)
 	: Resource(resourceDesc, clearValue, name)
 	, m_TextureUsage(textureUsage)
 {
@@ -24,7 +24,7 @@ Texture::Texture(const D3D12_RESOURCE_DESC& resourceDesc,
 
 Texture::Texture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
 	TextureUsage textureUsage,
-	const std::wstring& name)
+	const std::string& name)
 	: Resource(resource, name)
 	, m_TextureUsage(textureUsage)
 {
@@ -88,7 +88,7 @@ void Texture::Resize(uint32_t width, uint32_t height, uint32_t depthOrArraySize)
 		));
 
 		// Retain the name of the resource if one was already specified.
-		m_d3d12Resource->SetName(m_ResourceName.c_str());
+		m_d3d12Resource->SetName(utf8_to_wstring(m_ResourceName).c_str());
 
 		ResourceStateTracker::AddGlobalResourceState(m_d3d12Resource.Get(), D3D12_RESOURCE_STATE_COMMON);
 

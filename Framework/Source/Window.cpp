@@ -25,7 +25,7 @@ Window::Window(HWND hWnd, const std::wstring& windowName, uint16_t clientWidth, 
 
 	for (int i = 0; i < BufferCount; ++i)
 	{
-		m_BackBufferTextures[i].SetName(L"Backbuffer[" + std::to_wstring(i) + L"]");
+		m_BackBufferTextures[i].SetName("Backbuffer[" + std::to_string(i) + "]");
 	}
 
 	m_dxgiSwapChain = CreateSwapChain();

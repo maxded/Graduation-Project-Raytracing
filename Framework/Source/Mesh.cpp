@@ -4,11 +4,12 @@
 #include <Mesh.h>
 #include <MeshData.h>
 #include <ResourceStateTracker.h>
-
-
+#include <Camera.h>
 
 Mesh::Mesh()
 	: m_SubMeshes{}
+	, m_Name("unavailable")
+	, m_Data{}
 {
 	
 }
@@ -21,6 +22,8 @@ Mesh::~Mesh()
 void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandList& commandList)
 {
 	auto device = Application::Get().GetDevice();
+
+	m_Name = doc.meshes[meshIndex].name;
 
 	m_SubMeshes.resize(doc.meshes[meshIndex].primitives.size());
 
@@ -120,7 +123,7 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandLis
 		std::memcpy(CPU + offset, iBuffer.Data, iBuffer.TotalSize);
 		// TODO: check index buffer format
 		submesh.m_IndexCount = iBuffer.Accessor->count;
-		DXGI_FORMAT IndexFormat = (iBuffer.DataStride) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+		DXGI_FORMAT IndexFormat = (iBuffer.DataStride == 2) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
 
 		commandList.CopyBuffer(submesh.m_VertexBuffer, totalBufferSize, CPU);
 		commandList.CopyIndexBuffer(submesh.m_IndexBuffer, submesh.m_IndexCount, IndexFormat, CPU + offset);
@@ -129,16 +132,33 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandLis
 		submesh.m_VertexBuffer.CreateViews(numElements, elementSize);
 		submesh.m_IndexBuffer.CreateViews(iBuffer.Accessor->count, iBuffer.DataStride);
 
+		submesh.m_VertexBuffer.SetName(m_Name + " Vertex Buffer");
+		submesh.m_IndexBuffer.SetName(m_Name + " Index Buffer");
+
 		delete[] pBuffer;
 	}
 }
 
 void Mesh::Render(CommandList& commandList)
 {
+	Camera& camera = Camera::Get();
+
+	XMMATRIX model						= m_Data.m_ModelMatrix;
+	XMMATRIX modelView					= model * camera.get_ViewMatrix();
+	XMMATRIX inverseTransposeModelView	= XMMatrixTranspose(XMMatrixInverse(nullptr, modelView));
+	XMMATRIX modelViewProjection		= model * camera.get_ViewMatrix() * camera.get_ProjectionMatrix();
+	
+	m_Data.m_ModelViewMatrix				 = modelView;
+	m_Data.m_InverseTransposeModelViewMatrix = inverseTransposeModelView;
+	m_Data.m_ModelViewProjectionMatrix		 = modelViewProjection;
+
+	commandList.SetGraphicsDynamicConstantBuffer(0, m_Data);
+
 	for (auto& submesh : m_SubMeshes)
 	{
 		commandList.SetPrimitiveTopology(submesh.m_Topology);
 		commandList.SetVertexBuffer(0, submesh.m_VertexBuffer);
+
 		if (submesh.m_IndexCount > 0)
 		{
 			commandList.SetIndexBuffer(submesh.m_IndexBuffer);
@@ -149,5 +169,10 @@ void Mesh::Render(CommandList& commandList)
 			commandList.Draw(submesh.m_VertexBuffer.GetNumVertices(), 1, 0, 0);
 		}		
 	}
+}
+
+void Mesh::SetModelMatrix(DirectX::XMMATRIX modelMatrix)
+{
+	m_Data.m_ModelMatrix = modelMatrix;	
 }
 

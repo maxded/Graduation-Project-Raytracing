@@ -5,11 +5,13 @@
 class IndexBuffer : public Buffer
 {
 public:
-	IndexBuffer(const std::wstring& name = L"IndexBuffer");
+	IndexBuffer(const std::string& name = "Index Buffer");
 	virtual ~IndexBuffer();
 
 	// Inherited from Buffer
 	virtual void CreateViews(size_t numElements, size_t elementSize) override;
+
+	void CreateViews(uint32_t numElements, uint32_t totalSize, DXGI_FORMAT format);
 
 	size_t GetNumIndicies() const
 	{

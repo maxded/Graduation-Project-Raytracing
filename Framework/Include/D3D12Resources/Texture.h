@@ -13,14 +13,14 @@ class Texture : public Resource
 {
 public:
 	explicit Texture(TextureUsage textureUsage = TextureUsage::Albedo,
-		const std::wstring& name = L"");
+		const std::string& name = "Texture");
 	explicit Texture(const D3D12_RESOURCE_DESC& resourceDesc,
 		const D3D12_CLEAR_VALUE* clearValue = nullptr,
 		TextureUsage textureUsage = TextureUsage::Albedo,
-		const std::wstring& name = L"");
+		const std::string& name = "Texture");
 	explicit Texture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
 		TextureUsage textureUsage = TextureUsage::Albedo,
-		const std::wstring& name = L"");
+		const std::string& name = "Texture");
 
 	Texture(const Texture& copy);
 	Texture(Texture&& copy);

@@ -2,7 +2,7 @@
 
 #include <VertexBuffer.h>
 
-VertexBuffer::VertexBuffer(const std::wstring& name)
+VertexBuffer::VertexBuffer(const std::string& name)
 	: Buffer(name)
 	, m_NumVertices(0)
 	, m_VertexStride(0)

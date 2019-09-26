@@ -8,10 +8,10 @@
 class ByteAddressBuffer : public Buffer
 {
 public:
-	ByteAddressBuffer(const std::wstring& name = L"");
+	ByteAddressBuffer(const std::string& name = "Byte Address Buffer");
 	ByteAddressBuffer(const D3D12_RESOURCE_DESC& resDesc,
 		size_t numElements, size_t elementSize,
-		const std::wstring& name = L"");
+		const std::string& name = "Byte Address Buffer");
 
 	size_t GetBufferSize() const
 	{

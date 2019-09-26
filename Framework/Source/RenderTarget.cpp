@@ -5,7 +5,8 @@
 RenderTarget::RenderTarget()
 	: m_Textures(AttachmentPoint::NumAttachmentPoints)
 	, m_Size(0, 0)
-{}
+{
+}
 
 // Attach a texture to the render target.
 // The texture will be copied into the texture array.

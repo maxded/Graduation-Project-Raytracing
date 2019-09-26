@@ -4,7 +4,7 @@
 
 #include <Application.h>
 
-ByteAddressBuffer::ByteAddressBuffer(const std::wstring& name)
+ByteAddressBuffer::ByteAddressBuffer(const std::string& name)
 	: Buffer(name)
 {
 	m_SRV = Application::Get().AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -13,7 +13,7 @@ ByteAddressBuffer::ByteAddressBuffer(const std::wstring& name)
 
 ByteAddressBuffer::ByteAddressBuffer(const D3D12_RESOURCE_DESC& resDesc,
 	size_t numElements, size_t elementSize,
-	const std::wstring& name)
+	const std::string& name)
 	: Buffer(resDesc, numElements, elementSize, name)
 {}
 

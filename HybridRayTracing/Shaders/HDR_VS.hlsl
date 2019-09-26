@@ -10,7 +10,7 @@ ConstantBuffer<Mat> MatCB : register(b0, space0);
 
 struct VS_INPUT
 {
-    float3 Position      : POSITION;
+    float3 Position     : POSITION;
     float3 Normal		: NORMAL;
     float4 Tangent		: TANGENT;
     float2 TexCoord     : TEXCOORD;

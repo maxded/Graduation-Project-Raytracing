@@ -37,6 +37,7 @@ struct SpotLight
 		, Intensity(1.0f)
 		, SpotAngle(DirectX::XM_PIDIV2)
 		, Attenuation(0.0f)
+		, Padding (0.0f)
 	{}
 
 	DirectX::XMFLOAT4    PositionWS; // Light position in world space.

@@ -7,10 +7,10 @@
 class StructuredBuffer : public Buffer
 {
 public:
-	StructuredBuffer(const std::wstring& name = L"");
+	StructuredBuffer(const std::string& name = "Structured Buffer");
 	StructuredBuffer(const D3D12_RESOURCE_DESC& resDesc,
 		size_t numElements, size_t elementSize,
-		const std::wstring& name = L"");
+		const std::string& name = "Structured Buffer");
 
 	/**
 	* Get the number of elements contained in this buffer.

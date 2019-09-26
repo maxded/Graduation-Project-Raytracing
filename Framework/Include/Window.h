@@ -10,7 +10,6 @@
 #include <Events.h>
 #include <HighResolutionClock.h>
 #include <RenderTarget.h>
-#include <Texture.h>
 
 #include <string>
 #include <memory>

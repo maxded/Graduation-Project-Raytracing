@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <codecvt>
+#include <string>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h> // For HRESULT
@@ -296,4 +298,25 @@ inline bool StringEndsWith(const std::string& subject, const std::string& suffix
 		suffix.length(),
 		suffix
 	) == 0;
+}
+
+// convert UTF-8 string to wstring
+inline std::wstring utf8_to_wstring(const std::string& str)
+{
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+	return myconv.from_bytes(str);
+}
+
+// convert wstring to UTF-8 string
+inline std::string wstring_to_utf8(const std::wstring& str)
+{
+	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+	return myconv.to_bytes(str);
+}
+
+// Clamp a value between a min and max range.
+template<typename T>
+inline constexpr const T& clamp(const T& val, const T& min = T(0), const T& max = T(1))
+{
+	return val < min ? min : val > max ? max : val;
 }

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <Events.h>
-
+#include <stdint.h>
 #include <memory>
 #include <string>
+
+#include <Events.h>
 
 class Window;
 
@@ -104,4 +105,15 @@ private:
 	uint16_t m_Width;
 	uint16_t m_Height;
 	bool m_vSync;	
+
+	// Camera controller
+	float m_Forward;
+	float m_Backward;
+	float m_Left;
+	float m_Right;
+	float m_Up;
+	float m_Down;
+
+	float m_Pitch;
+	float m_Yaw;
 };

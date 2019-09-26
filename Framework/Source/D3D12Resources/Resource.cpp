@@ -5,12 +5,12 @@
 #include <Application.h>
 #include <ResourceStateTracker.h>
 
-Resource::Resource(const std::wstring& name)
+Resource::Resource(const std::string& name)
 	: m_ResourceName(name)
 	, m_FormatSupport({})
 {}
 
-Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue, const std::wstring& name)
+Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue, const std::string& name)
 {
 	if (clearValue)
 	{
@@ -34,7 +34,7 @@ Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VA
 	SetName(name);
 }
 
-Resource::Resource(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const std::wstring& name)
+Resource::Resource(Microsoft::WRL::ComPtr<ID3D12Resource> resource, const std::string& name)
 	: m_d3d12Resource(resource)
 	, m_FormatSupport({})
 {
@@ -107,12 +107,12 @@ void Resource::SetD3D12Resource(Microsoft::WRL::ComPtr<ID3D12Resource> d3d12Reso
 	SetName(m_ResourceName);
 }
 
-void Resource::SetName(const std::wstring& name)
+void Resource::SetName(const std::string& name)
 {
 	m_ResourceName = name;
 	if (m_d3d12Resource && !m_ResourceName.empty())
 	{
-		m_d3d12Resource->SetName(m_ResourceName.c_str());
+		m_d3d12Resource->SetName(utf8_to_wstring(m_ResourceName).c_str());
 	}
 }
 
