@@ -111,22 +111,22 @@
     <ClInclude Include="Include\External\json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Mesh.h">
+    <ClInclude Include="Include\SceneRendering\Mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\MeshData.h">
+    <ClInclude Include="Include\SceneRendering\MeshData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Node.h">
+    <ClInclude Include="Include\SceneRendering\MeshInstance.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Scenes.h">
+    <ClInclude Include="Include\SceneRendering\Node.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\MeshInstance.h">
+    <ClInclude Include="Include\SceneRendering\Scenes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Camera.h">
+    <ClInclude Include="Include\SceneRendering\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -197,19 +197,19 @@
     <ClCompile Include="Source\RootSignature.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Mesh.cpp">
+    <ClCompile Include="Source\SceneRendering\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\MeshData.cpp">
+    <ClCompile Include="Source\SceneRendering\Mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Node.cpp">
+    <ClCompile Include="Source\SceneRendering\MeshData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scenes.cpp">
+    <ClCompile Include="Source\SceneRendering\Scenes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Camera.cpp">
+    <ClCompile Include="Source\SceneRendering\Node.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
