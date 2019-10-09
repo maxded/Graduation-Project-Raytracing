@@ -8,6 +8,7 @@
 Resource::Resource(const std::string& name)
 	: m_ResourceName(name)
 	, m_FormatSupport({})
+	, m_d3d12ClearValue()
 {}
 
 Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VALUE* clearValue, const std::string& name)
@@ -16,7 +17,7 @@ Resource::Resource(const D3D12_RESOURCE_DESC& resourceDesc, const D3D12_CLEAR_VA
 	{
 		m_d3d12ClearValue = std::make_unique<D3D12_CLEAR_VALUE>(*clearValue);
 	}
-
+		
 	auto device = Application::Get().GetDevice();
 
 	ThrowIfFailed(device->CreateCommittedResource(
@@ -46,8 +47,10 @@ Resource::Resource(const Resource& copy)
 	: m_d3d12Resource(copy.m_d3d12Resource)
 	, m_FormatSupport(copy.m_FormatSupport)
 	, m_ResourceName(copy.m_ResourceName)
-	, m_d3d12ClearValue(std::make_unique<D3D12_CLEAR_VALUE>(*copy.m_d3d12ClearValue))
-{}
+{
+	if (m_d3d12ClearValue)
+		std::make_unique<D3D12_CLEAR_VALUE>(*copy.m_d3d12ClearValue);
+}
 
 Resource::Resource(Resource&& copy)
 	: m_d3d12Resource(std::move(copy.m_d3d12Resource))

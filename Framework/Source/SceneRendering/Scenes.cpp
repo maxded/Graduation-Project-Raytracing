@@ -7,15 +7,12 @@ using namespace DirectX;
 
 Scenes::Scenes()
 	: m_Scenes{}
-	, m_Meshes{}
-{
-
-}
+	, m_DocumentData{}
+	, m_CurrentScene(nullptr)
+{}
 
 Scenes::~Scenes()
-{
-
-}
+{}
 
 void Scenes::LoadFromFile(const std::string& filename, CommandList& commandList)
 {
@@ -27,46 +24,68 @@ void Scenes::LoadFromFile(const std::string& filename, CommandList& commandList)
 	if (StringEndsWith(filename, ".glb"))
 		document = fx::gltf::LoadFromBinary(filename);
 
-	m_Scenes.resize(document.scenes.size());
-	m_Nodes.resize(document.nodes.size());
-	m_Meshes.resize(document.meshes.size());
+	DocumentData documentData;
 
-	// Generate meshes
-	for (int i = 0; i < document.meshes.size(); ++i)
+	documentData.m_Meshes.resize(document.meshes.size());
+
+	// Generate mesh data for current document
+	for (int i = 0; i < document.meshes.size(); i++)
 	{
-		m_Meshes[i].Load(document, i, commandList);
+		documentData.m_Meshes[i].Load(document, i, commandList);
 	}
 
 	const XMMATRIX rootTransform = XMMatrixIdentity();
 
-	// Generate scenes and nodes
-	for (int i = 0; i < document.scenes.size(); ++i)
+	std::vector<Node> Nodes(document.nodes.size());
+
+	if (!document.scenes.empty())
 	{
-		m_Scenes[i].m_Name = document.scenes[i].name;
-
-		for (const uint32_t node : document.scenes[i].nodes)
+		// Generate scenes and nodes
+		for (int i = 0; i < document.scenes.size(); i++)
 		{
-			m_Nodes[node].Load(document, node, rootTransform, m_Nodes);
+			Scene scene;
+			scene.m_Name = document.scenes[i].name;
 
-			const Node& currentSceneNode = m_Nodes[node];
-			if(currentSceneNode.MeshIndex() > -1)
-				m_Scenes[i].m_Instances.push_back({ currentSceneNode.Transform(), currentSceneNode.MeshIndex() });
+			for (const uint32_t sceneNode : document.scenes[i].nodes)
+			{
+				Node::Load(document, sceneNode, rootTransform, Nodes);
+			}
 
-			m_Scenes[i].m_SceneNodes.push_back(node);
-		}
+			for (auto& node : Nodes)
+			{
+				if (node.MeshIndex() >= 0)
+				{
+					scene.m_Instances.push_back({ node.Transform(), node.MeshIndex() });
+				}
+			}
 
-		// Set base transform for all mesh instances
-		for (auto& instance : m_Scenes[i].m_Instances)
-		{
-			Mesh& mesh = m_Meshes[instance.MeshIndex];
-			mesh.SetBaseTransform(instance.Transform);
+			scene.m_pData = std::make_shared<DocumentData>(documentData);
+			m_Scenes.emplace_back(scene);
 		}
 	}
-
-	if (document.scene > -1)
-		m_CurrentScene = std::make_unique<Scene>(m_Scenes[document.scene]);
 	else
+	{
+		Scene scene;
+
+		static uint32_t sceneNumber = 0;
+		scene.m_Name = "Scene " + std::to_string(sceneNumber);
+
+		// No scene data - display individual meshes
+		for (int32_t i = 0; i < document.meshes.size(); i++)
+		{
+			scene.m_Instances.push_back({ XMMatrixIdentity(), i });
+		}
+
+		scene.m_pData = std::make_shared<DocumentData>(documentData);
+		m_Scenes.emplace_back(scene);
+	}
+
+	m_DocumentData.emplace_back(documentData);
+	
+	if (!m_CurrentScene)
+	{
 		m_CurrentScene = std::make_unique<Scene>(m_Scenes[0]);
+	}
 }
 
 void Scenes::RenderCurrentScene(CommandList& commandList)
@@ -74,8 +93,16 @@ void Scenes::RenderCurrentScene(CommandList& commandList)
 	// Loop over all instances of scene and render
 	for (auto& instance : m_CurrentScene->m_Instances)
 	{
-		Mesh& mesh = m_Meshes[instance.MeshIndex];
+		Mesh& mesh = m_CurrentScene->m_pData->m_Meshes[instance.MeshIndex];
+		mesh.SetBaseTransform(instance.Transform);
 		mesh.Render(commandList);
 	}
+}
+
+void Scenes::SetCurrentScene(uint32_t index)
+{
+	// Check for valid index
+	if (index <= m_Scenes.size() - 1)
+		m_CurrentScene = std::make_unique<Scene>(m_Scenes[index]);
 }
 

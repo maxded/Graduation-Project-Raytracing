@@ -74,6 +74,7 @@ ConstantBuffer<LightProperties> LightPropertiesCB : register(b1);
 StructuredBuffer<PointLight> PointLights : register(t0);
 StructuredBuffer<SpotLight> SpotLights : register(t1);
 
+
 float3 LinearToSRGB(float3 x)
 {
 	// This is exactly the sRGB curve

@@ -14,10 +14,10 @@ public:
 	virtual ~Node();
 protected:
 	
-	void Load(fx::gltf::Document const& doc, uint32_t nodeIndex, const DirectX::XMMATRIX& parentTransform, std::vector<Node>& nodes);
+	static void Load(const fx::gltf::Document& doc, uint32_t nodeIndex, const DirectX::XMMATRIX& parentTransform, std::vector<Node>& nodes);
 
-	int32_t MeshIndex() const { return m_MeshIndex; }
-	DirectX::XMMATRIX Transform() const { return m_LocalTransform; }
+	const int32_t MeshIndex() const { return m_MeshIndex; }
+	const DirectX::XMMATRIX& Transform() const { return m_LocalTransform; }
 private:
 	std::string			  m_Name;
 	DirectX::XMMATRIX	  m_LocalTransform;

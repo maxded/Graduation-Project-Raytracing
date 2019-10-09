@@ -6,14 +6,13 @@ struct Mat
 	matrix ModelViewProjectionMatrix;
 };
 
-ConstantBuffer<Mat> MatCB : register(b0, space0);
+ConstantBuffer<Mat> MatCB : register(b0);
 
-struct VS_INPUT
+struct VertexPositionNormalTexture
 {
-    float3 Position     : POSITION;
-    float3 Normal		: NORMAL;
-    float4 Tangent		: TANGENT;
-    float2 TexCoord     : TEXCOORD;
+	float3 Position : POSITION;
+	float3 Normal   : NORMAL;
+	float2 TexCoord : TEXCOORD;
 };
 
 struct VertexShaderOutput
@@ -24,14 +23,14 @@ struct VertexShaderOutput
 	float4 Position   : SV_Position;
 };
 
-VertexShaderOutput main(VS_INPUT IN)
+VertexShaderOutput main(VertexPositionNormalTexture IN)
 {
 	VertexShaderOutput OUT;
 
-	OUT.Position = mul(MatCB.ModelViewProjectionMatrix, float4(IN.Position, 1.0f));
-	OUT.PositionVS = mul(MatCB.ModelViewMatrix, float4(IN.Position, 1.0f));
-	OUT.NormalVS = mul((float3x3)MatCB.InverseTransposeModelViewMatrix, IN.Normal);
-	OUT.TexCoord = IN.TexCoord;
+	OUT.Position	= mul(MatCB.ModelViewProjectionMatrix, float4(IN.Position, 1.0f));
+	OUT.PositionVS	= mul(MatCB.ModelViewMatrix, float4(IN.Position, 1.0f));
+	OUT.NormalVS	= mul((float3x3)MatCB.InverseTransposeModelViewMatrix, IN.Normal);
+	OUT.TexCoord	= IN.TexCoord;
 
 	return OUT;
 }

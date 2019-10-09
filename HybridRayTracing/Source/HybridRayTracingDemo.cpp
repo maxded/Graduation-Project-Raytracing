@@ -140,9 +140,17 @@ bool HybridRayTracingDemo::LoadContent()
 	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto commandList	= commandQueue->GetCommandList();
 
+	// Load all glTF 2.0 scene data
 	m_Scenes = std::unique_ptr<Scenes>(new Scenes);
 	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
-
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\AntiqueCamera.gltf", *commandList);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\BoomBox.gltf", *commandList);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Buggy.gltf", *commandList);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\WaterBottle.gltf", *commandList);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\CesiumMilkTruck.gltf", *commandList);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\DamagedHelmet.gltf", *commandList);
+	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\SciFiHelmet.gltf", *commandList);
+	
 	// Create an HDR intermediate render target.
 	DXGI_FORMAT HDRFormat			= DXGI_FORMAT_R16G16B16A16_FLOAT;
 	DXGI_FORMAT depthBufferFormat	= DXGI_FORMAT_D32_FLOAT;
@@ -474,6 +482,30 @@ void HybridRayTracingDemo::OnKeyPressed(KeyEventArgs& e)
 		}
 	case KeyCode::V:
 		m_pWindow->ToggleVSync();
+		break;
+	case KeyCode::D1:
+		m_Scenes->SetCurrentScene(0);
+		break;
+	case KeyCode::D2:
+		m_Scenes->SetCurrentScene(1);
+		break;
+	case KeyCode::D3:
+		m_Scenes->SetCurrentScene(2);
+		break;
+	case KeyCode::D4:
+		m_Scenes->SetCurrentScene(3);
+		break;		
+	case KeyCode::D5:
+		m_Scenes->SetCurrentScene(4);
+		break;
+	case KeyCode::D6:
+		m_Scenes->SetCurrentScene(5);
+		break;
+	case KeyCode::D7:
+		m_Scenes->SetCurrentScene(6);
+		break;
+	case KeyCode::D8:
+		m_Scenes->SetCurrentScene(7);
 		break;
 	case KeyCode::Space:
 		m_AnimateLights = !m_AnimateLights;

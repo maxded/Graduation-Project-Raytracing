@@ -112,16 +112,16 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandLis
 		
 		// Copy normal data to upload buffer...
 		std::memcpy(CPU + offset, nBuffer.Data, nBuffer.TotalSize);
-		numElements.push_back(vBuffer.Accessor->count);
-		elementSize.push_back(vBuffer.DataStride);
+		numElements.push_back(nBuffer.Accessor->count);
+		elementSize.push_back(nBuffer.DataStride);
 		offset += nBuffer.TotalSize;
 
 		if (tBuffer.HasData())
 		{
 			// Copy tangent data to upload buffer...
 			std::memcpy(CPU + offset, tBuffer.Data, tBuffer.TotalSize);
-			numElements.push_back(vBuffer.Accessor->count);
-			elementSize.push_back(vBuffer.DataStride);
+			numElements.push_back(tBuffer.Accessor->count);
+			elementSize.push_back(tBuffer.DataStride);
 			offset += tBuffer.TotalSize;
 		}
 
@@ -129,14 +129,13 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandLis
 		{
 			// Copy texcoord data to upload buffer...
 			std::memcpy(CPU + offset, cBuffer.Data, cBuffer.TotalSize);
-			numElements.push_back(vBuffer.Accessor->count);
-			elementSize.push_back(vBuffer.DataStride);
+			numElements.push_back(cBuffer.Accessor->count);
+			elementSize.push_back(cBuffer.DataStride);
 			offset += cBuffer.TotalSize;
 		}
 	
 		// Copy index data to upload buffer...
 		std::memcpy(CPU + offset, iBuffer.Data, iBuffer.TotalSize);
-		// TODO: check index buffer format
 		submesh.m_IndexCount = iBuffer.Accessor->count;
 		DXGI_FORMAT IndexFormat = (iBuffer.DataStride == 2) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
 

@@ -1,0 +1,180 @@
+{
+    "asset" : {
+        "generator" : "Khronos glTF Blender I/O v0.9.36",
+        "version" : "2.0"
+    },
+    "scene" : 0,
+    "scenes" : [
+        {
+            "name" : "Scene",
+            "nodes" : [
+                0
+            ]
+        }
+    ],
+    "nodes" : [
+        {
+            "mesh" : 0,
+            "name" : "BoomBox",
+            "rotation" : [
+                0,
+                0.7071068286895752,
+                -0.7071067094802856,
+                0
+            ],
+            "scale" : [
+                150,
+                150,
+                150
+            ]
+        }
+    ],
+    "materials" : [
+        {
+            "emissiveFactor" : [
+                1,
+                1,
+                1
+            ],
+            "emissiveTexture" : {
+                "index" : 0,
+                "texCoord" : 0
+            },
+            "name" : "BoomBox_Mat.001",
+            "normalTexture" : {
+                "index" : 1,
+                "texCoord" : 0
+            },
+            "occlusionTexture" : {
+                "index" : 2,
+                "texCoord" : 0
+            },
+            "pbrMetallicRoughness" : {
+                "baseColorTexture" : {
+                    "index" : 3,
+                    "texCoord" : 0
+                },
+                "metallicRoughnessTexture" : {
+                    "index" : 2,
+                    "texCoord" : 0
+                }
+            }
+        }
+    ],
+    "meshes" : [
+        {
+            "name" : "BoomBox.001",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 0,
+                        "NORMAL" : 1,
+                        "TEXCOORD_0" : 2
+                    },
+                    "indices" : 3,
+                    "material" : 0
+                }
+            ]
+        }
+    ],
+    "textures" : [
+        {
+            "source" : 0
+        },
+        {
+            "source" : 1
+        },
+        {
+            "source" : 2
+        },
+        {
+            "source" : 3
+        }
+    ],
+    "images" : [
+        {
+            "mimeType" : "image/png",
+            "name" : "BoomBox_emissive",
+            "uri" : "BoomBox_emissive.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "BoomBox_normal",
+            "uri" : "BoomBox_normal.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "BoomBox_occlusionRoughnessMetallic",
+            "uri" : "BoomBox_occlusionRoughnessMetallic.png"
+        },
+        {
+            "mimeType" : "image/png",
+            "name" : "BoomBox_baseColor",
+            "uri" : "BoomBox_baseColor.png"
+        }
+    ],
+    "accessors" : [
+        {
+            "bufferView" : 0,
+            "componentType" : 5126,
+            "count" : 3736,
+            "max" : [
+                0.009921154007315636,
+                0.010076245293021202,
+                0.00977163016796112
+            ],
+            "min" : [
+                -0.009921154007315636,
+                -0.010076245293021202,
+                -0.00977163016796112
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 1,
+            "componentType" : 5126,
+            "count" : 3736,
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 2,
+            "componentType" : 5126,
+            "count" : 3736,
+            "type" : "VEC2"
+        },
+        {
+            "bufferView" : 3,
+            "componentType" : 5123,
+            "count" : 18108,
+            "type" : "SCALAR"
+        }
+    ],
+    "bufferViews" : [
+        {
+            "buffer" : 0,
+            "byteLength" : 44832,
+            "byteOffset" : 0
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 44832,
+            "byteOffset" : 44832
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 29888,
+            "byteOffset" : 89664
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 36216,
+            "byteOffset" : 119552
+        }
+    ],
+    "buffers" : [
+        {
+            "byteLength" : 155768,
+            "uri" : "BoomBox.bin"
+        }
+    ]
+}

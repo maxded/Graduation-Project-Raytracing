@@ -51,7 +51,7 @@ Camera& Camera::Get()
 
 void XM_CALLCONV Camera::set_LookAt(FXMVECTOR eye, FXMVECTOR target, FXMVECTOR up)
 {
-	pData->m_ViewMatrix = XMMatrixLookAtLH(eye, target, up);
+	pData->m_ViewMatrix = XMMatrixLookAtRH(eye, target, up);
 
 	pData->m_Translation = eye;
 	pData->m_Rotation = XMQuaternionRotationMatrix(XMMatrixTranspose(pData->m_ViewMatrix));

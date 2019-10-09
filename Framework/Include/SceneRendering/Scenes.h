@@ -7,12 +7,20 @@
 
 class Scenes
 {
+	struct DocumentData;
+
 public:
 	struct Scene
 	{
+		Scene()
+			: m_Name("")
+			, m_Instances{}
+			, m_pData(nullptr)
+		{}
+
 		std::string m_Name;
-		std::vector<uint32_t>	  m_SceneNodes;
 		std::vector<MeshInstance> m_Instances;
+		std::shared_ptr<DocumentData> m_pData;
 	};
 
 public:
@@ -25,12 +33,21 @@ public:
 
 	const Scene& GetCurrentScene() const { return *m_CurrentScene; }
 
+	void SetCurrentScene(uint32_t index);
+
 protected:
 
 private:
-	std::vector<Scene> m_Scenes;
-	std::vector<Node>  m_Nodes;
-	std::vector<Mesh>  m_Meshes;
+	struct DocumentData
+	{
+		DocumentData()
+			: m_Meshes{}
+		{}
 
-	std::unique_ptr<Scene> m_CurrentScene;
+		std::vector<Mesh>	m_Meshes;
+	};
+
+	std::vector<DocumentData> m_DocumentData;
+	std::vector<Scene>		  m_Scenes;
+	std::unique_ptr<Scene>	  m_CurrentScene;
 };
