@@ -141,17 +141,17 @@ void Game::OnKeyReleased(KeyEventArgs& e)
 	}
 }
 
-void Game::OnMouseMoved(class MouseMotionEventArgs& e)
+void Game::OnMouseMoved(MouseMotionEventArgs& e)
 {
-	const float mouseSpeed = 0.1f;
+	const float mouseSpeed = 0.2f;
 
-	if (e.LeftButton)
+	if (e.RightButton)
 	{
-		m_Pitch -= e.RelY * mouseSpeed;
+		m_Pitch += e.RelY * mouseSpeed;
 
 		m_Pitch = clamp(m_Pitch, -90.0f, 90.0f);
 
-		m_Yaw -= e.RelX * mouseSpeed;
+		m_Yaw += e.RelX * mouseSpeed;
 	}
 }
 

@@ -51,11 +51,6 @@ void Node::Load(fx::gltf::Document const& doc, uint32_t nodeIndex, const XMMATRI
 		}
 	}
 
-
-	char buffer[512];
-	sprintf_s(buffer, "Node Index: %i\n", nodeIndex);
-	OutputDebugStringA(buffer);
-
 	if (node.camera >= 0)
 	{
 		

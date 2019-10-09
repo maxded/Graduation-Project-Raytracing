@@ -133,6 +133,9 @@ private:
 	bool m_VSync;
 	bool m_Fullscreen;
 
+	int m_PreviousMouseX;
+	int m_PreviousMouseY;
+
 	HighResolutionClock m_UpdateClock;
 	HighResolutionClock m_RenderClock;
 

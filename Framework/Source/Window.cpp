@@ -16,6 +16,8 @@ Window::Window(HWND hWnd, const std::wstring& windowName, uint16_t clientWidth, 
 	, m_ClientHeight(clientHeight)
 	, m_VSync(vSync)
 	, m_Fullscreen(false)
+	, m_PreviousMouseX(0)
+	, m_PreviousMouseY(0)
 	, m_FenceValues{ 0 }
 	, m_FrameValues{ 0 }
 {
@@ -212,6 +214,12 @@ void Window::OnKeyReleased(KeyEventArgs& e)
 // The mouse was moved
 void Window::OnMouseMoved(MouseMotionEventArgs& e)
 {
+	e.RelX = e.X - m_PreviousMouseX;
+	e.RelY = e.Y - m_PreviousMouseY;
+
+	m_PreviousMouseX = e.X;
+	m_PreviousMouseY = e.Y;
+
 	if (auto pGame = m_pGame.lock())
 	{
 		pGame->OnMouseMoved(e);
@@ -221,6 +229,9 @@ void Window::OnMouseMoved(MouseMotionEventArgs& e)
 // A button on the mouse was pressed
 void Window::OnMouseButtonPressed(MouseButtonEventArgs& e)
 {
+	m_PreviousMouseX = e.X;
+	m_PreviousMouseY = e.Y;
+
 	if (auto pGame = m_pGame.lock())
 	{
 		pGame->OnMouseButtonPressed(e);
