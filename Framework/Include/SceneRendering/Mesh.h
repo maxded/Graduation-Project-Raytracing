@@ -8,13 +8,17 @@
 
 class Mesh
 {
-	friend class Scenes;
+	friend class Scene;
 public:
 	Mesh();
 	~Mesh();
 
+	void SetBaseTransform(const DirectX::XMMATRIX& baseTransform);
+
 	void SetWorldMatrix(const DirectX::XMFLOAT3& translation, const DirectX::XMVECTOR& quaternion, float scale);
 	void SetWorldMatrix(const DirectX::XMMATRIX& worldMatrix);
+
+	void Render(CommandList& commandlist);
 
 	static const UINT VertexSlot	= 0;
 	static const UINT NormalSlot	= 1;
@@ -23,10 +27,6 @@ public:
 
 protected:
 	void Load(const fx::gltf::Document& doc, std::size_t meshIndex, CommandList& commandList);
-
-	void Render(CommandList& commandlist);
-
-	void SetBaseTransform(DirectX::XMMATRIX baseTransform);
 private:
 	std::string m_Name;
 

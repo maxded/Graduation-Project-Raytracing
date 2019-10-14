@@ -184,7 +184,7 @@ void Mesh::Render(CommandList& commandList)
 	}
 }
 
-void Mesh::SetBaseTransform(DirectX::XMMATRIX baseTransform)
+void Mesh::SetBaseTransform(const DirectX::XMMATRIX& baseTransform)
 {
 	m_BaseTransform			= baseTransform;
 	m_Data.m_ModelMatrix	= m_BaseTransform;

@@ -87,19 +87,15 @@ void Game::OnKeyPressed(KeyEventArgs& e)
 
 	switch (e.Key)
 	{
-	case KeyCode::Up:
 	case KeyCode::W:
 		m_Forward = 1.0f;
 		break;
-	case KeyCode::Left:
 	case KeyCode::A:
 		m_Left = 1.0f;
 		break;
-	case KeyCode::Down:
 	case KeyCode::S:
 		m_Backward = 1.0f;
 		break;
-	case KeyCode::Right:
 	case KeyCode::D:
 		m_Right = 1.0f;
 		break;

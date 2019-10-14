@@ -123,10 +123,13 @@
     <ClInclude Include="Include\SceneRendering\Node.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\SceneRendering\Scenes.h">
+    <ClInclude Include="Include\SceneRendering\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\SceneRendering\Camera.h">
+    <ClInclude Include="Include\SceneRendering\Scene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\SceneRendering\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -206,10 +209,10 @@
     <ClCompile Include="Source\SceneRendering\MeshData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\SceneRendering\Scenes.cpp">
+    <ClCompile Include="Source\SceneRendering\Node.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\SceneRendering\Node.cpp">
+    <ClCompile Include="Source\SceneRendering\Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

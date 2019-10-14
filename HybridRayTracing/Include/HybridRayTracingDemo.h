@@ -4,8 +4,7 @@
 #include <Light.h>
 #include <RenderTarget.h>
 #include <RootSignature.h>
-
-class Scenes;
+#include <Scene.h>
 
 class HybridRayTracingDemo : public Game
 {
@@ -50,8 +49,8 @@ protected:
 	void RescaleHDRRenderTarget(float scale);
 
 private:
-	// All scenes
-	std::unique_ptr<Scenes>	m_Scenes;
+	std::vector<std::shared_ptr<Scene>>		m_Scenes;
+	int										m_CurrentSceneIndex;
 
 	// HDR Render target
 	RenderTarget m_HDRRenderTarget;
@@ -67,8 +66,6 @@ private:
 
 	D3D12_RECT m_ScissorRect;
 
-	// Rotate the lights in a circle.
-	bool m_AnimateLights;
 	// Set to true if the Shift key is pressed.
 	bool m_Shift;
 
@@ -77,8 +74,4 @@ private:
 
 	// Scale the HDR render target to a fraction of the window size.
 	float m_RenderScale;
-
-	// Define some lights.
-	std::vector<PointLight> m_PointLights;
-	std::vector<SpotLight> m_SpotLights;
 };

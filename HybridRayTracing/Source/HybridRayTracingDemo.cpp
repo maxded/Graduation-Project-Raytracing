@@ -6,8 +6,10 @@
 #include <Window.h>
 #include <Material.h>
 #include <Camera.h>
-#include <Scenes.h>
 #include <Helpers.h>
+
+#include <SponzaScene.h>
+#include <DefaultScene.h>
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -26,12 +28,6 @@ using namespace DirectX;
 
 #include <DirectXColors.h>
 #include <DirectXMath.h>
-
-struct LightProperties
-{
-	uint32_t NumPointLights;
-	uint32_t NumSpotLights;
-};
 
 enum TonemapMethod : uint32_t
 {
@@ -97,34 +93,15 @@ enum RootParameters
 	NumRootParameters
 };
 
-// Builds a look-at (world) matrix from a point, up and direction vectors.
-XMMATRIX XM_CALLCONV LookAtMatrix(FXMVECTOR Position, FXMVECTOR Direction, FXMVECTOR Up)
-{
-	assert(!XMVector3Equal(Direction, XMVectorZero()));
-	assert(!XMVector3IsInfinite(Direction));
-	assert(!XMVector3Equal(Up, XMVectorZero()));
-	assert(!XMVector3IsInfinite(Up));
-
-	XMVECTOR R2 = XMVector3Normalize(Direction);
-
-	XMVECTOR R0 = XMVector3Cross(Up, R2);
-	R0 = XMVector3Normalize(R0);
-
-	XMVECTOR R1 = XMVector3Cross(R2, R0);
-
-	XMMATRIX M(R0, R1, R2, Position);
-
-	return M;
-}
-
 HybridRayTracingDemo::HybridRayTracingDemo(const std::wstring& name, int width, int height, bool vSync)
 	: Game(name, width, height, vSync)
 	, m_ScissorRect(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
-	, m_AnimateLights(false)
 	, m_Shift(false)
 	, m_Width(width)
 	, m_Height(height)
 	, m_RenderScale(1.0f)
+	, m_Scenes{}
+	, m_CurrentSceneIndex(0)
 {
 
 }
@@ -140,17 +117,15 @@ bool HybridRayTracingDemo::LoadContent()
 	auto commandQueue	= Application::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto commandList	= commandQueue->GetCommandList();
 
-	// Load all glTF 2.0 scene data
-	m_Scenes = std::unique_ptr<Scenes>(new Scenes);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\AntiqueCamera.gltf", *commandList);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\BoomBox.gltf", *commandList);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Buggy.gltf", *commandList);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\WaterBottle.gltf", *commandList);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\CesiumMilkTruck.gltf", *commandList);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\DamagedHelmet.gltf", *commandList);
-	m_Scenes->LoadFromFile("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\SciFiHelmet.gltf", *commandList);
-	
+	std::shared_ptr<SponzaScene> sponzaScene(new SponzaScene);
+	sponzaScene->Load("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Sponza.gltf", *commandList);
+
+	std::shared_ptr<DefaultScene> buggyScene(new DefaultScene);
+	buggyScene->Load("C:\\Users\\mdans\\Documents\\GPE\\HybridRayTracing\\Assets\\Buggy.gltf", *commandList);
+
+	m_Scenes.emplace_back(sponzaScene);
+	m_Scenes.emplace_back(buggyScene);
+
 	// Create an HDR intermediate render target.
 	DXGI_FORMAT HDRFormat			= DXGI_FORMAT_R16G16B16A16_FLOAT;
 	DXGI_FORMAT depthBufferFormat	= DXGI_FORMAT_D32_FLOAT;
@@ -213,7 +188,7 @@ bool HybridRayTracingDemo::LoadContent()
 		CD3DX12_ROOT_PARAMETER1 rootParameters[RootParameters::NumRootParameters];
 		rootParameters[RootParameters::MatricesCB].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
 		rootParameters[RootParameters::MaterialCB].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		rootParameters[RootParameters::LightPropertiesCB].InitAsConstants(sizeof(LightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		rootParameters[RootParameters::LightPropertiesCB].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
 		rootParameters[RootParameters::PointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
 		rootParameters[RootParameters::SpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
 
@@ -338,74 +313,7 @@ void HybridRayTracingDemo::OnUpdate(UpdateEventArgs& e)
 		totalTime = 0.0;
 	}
 
-	Camera& camera = Camera::Get();
-
-	XMMATRIX viewMatrix = camera.get_ViewMatrix();
-
-	const int numPointLights = 4;
-	const int numSpotLights = 4;
-
-	static const XMVECTORF32 LightColors[] =
-	{
-		Colors::White, Colors::Orange, Colors::Yellow, Colors::Green, Colors::Blue, Colors::Indigo, Colors::Violet, Colors::White
-	};
-
-	static float lightAnimTime = 0.0f;
-	if (m_AnimateLights)
-	{
-		lightAnimTime += static_cast<float>(e.ElapsedTime) * 0.5f * XM_PI;
-	}
-
-	const float radius = 8.0f;
-	const float offset = 2.0f * XM_PI / numPointLights;
-	const float offset2 = offset + (offset / 2.0f);
-
-	// Setup the light buffers.
-	m_PointLights.resize(numPointLights);
-	for (int i = 0; i < numPointLights; ++i)
-	{
-		PointLight& l = m_PointLights[i];
-
-		l.PositionWS = {
-			static_cast<float>(std::sin(lightAnimTime + offset * i)) * radius,
-			9.0f,
-			static_cast<float>(std::cos(lightAnimTime + offset * i)) * radius,
-			1.0f
-		};
-		XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-		XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-		XMStoreFloat4(&l.PositionVS, positionVS);
-
-		l.Color = XMFLOAT4(LightColors[i]);
-		l.Intensity = 1.0f;
-		l.Attenuation = 0.0f;
-	}
-
-	m_SpotLights.resize(numSpotLights);
-	for (int i = 0; i < numSpotLights; ++i)
-	{
-		SpotLight& l = m_SpotLights[i];
-
-		l.PositionWS = {
-			static_cast<float>(std::sin(lightAnimTime + offset * i + offset2)) * radius,
-			9.0f,
-			static_cast<float>(std::cos(lightAnimTime + offset * i + offset2)) * radius,
-			1.0f
-		};
-		XMVECTOR positionWS = XMLoadFloat4(&l.PositionWS);
-		XMVECTOR positionVS = XMVector3TransformCoord(positionWS, viewMatrix);
-		XMStoreFloat4(&l.PositionVS, positionVS);
-
-		XMVECTOR directionWS = XMVector3Normalize(XMVectorSetW(XMVectorNegate(positionWS), 0));
-		XMVECTOR directionVS = XMVector3Normalize(XMVector3TransformNormal(directionWS, viewMatrix));
-		XMStoreFloat4(&l.DirectionWS, directionWS);
-		XMStoreFloat4(&l.DirectionVS, directionVS);
-
-		l.Color = XMFLOAT4(LightColors[numPointLights + i]);
-		l.Intensity = 1.0f;
-		l.SpotAngle = XMConvertToRadians(45.0f);
-		l.Attenuation = 0.0f;
-	}
+	m_Scenes[m_CurrentSceneIndex]->Update(e); 
 }
 
 void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
@@ -432,18 +340,9 @@ void HybridRayTracingDemo::OnRender(RenderEventArgs& e)
 	commandList->SetPipelineState(m_HDRPipelineState);
 	commandList->SetGraphicsRootSignature(m_HDRRootSignature);
 
-	// Upload lights
-	LightProperties lightProps;
-	lightProps.NumPointLights = static_cast<uint32_t>(m_PointLights.size());
-	lightProps.NumSpotLights  = static_cast<uint32_t>(m_SpotLights.size());
-
-	commandList->SetGraphics32BitConstants(RootParameters::LightPropertiesCB, lightProps);
-	commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, m_PointLights);
-	commandList->SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, m_SpotLights);
-
 	commandList->SetGraphicsDynamicConstantBuffer(RootParameters::MaterialCB, Material::Ruby);
 
-	m_Scenes->RenderCurrentScene(*commandList);
+	m_Scenes[m_CurrentSceneIndex]->Render(*commandList);
 
 	// Perform HDR -> SDR tonemapping directly to the Window's render target.
 	commandList->SetRenderTarget(m_pWindow->GetRenderTarget());
@@ -483,35 +382,19 @@ void HybridRayTracingDemo::OnKeyPressed(KeyEventArgs& e)
 	case KeyCode::V:
 		m_pWindow->ToggleVSync();
 		break;
-	case KeyCode::D1:
-		m_Scenes->SetCurrentScene(0);
-		break;
-	case KeyCode::D2:
-		m_Scenes->SetCurrentScene(1);
-		break;
-	case KeyCode::D3:
-		m_Scenes->SetCurrentScene(2);
-		break;
-	case KeyCode::D4:
-		m_Scenes->SetCurrentScene(3);
-		break;		
-	case KeyCode::D5:
-		m_Scenes->SetCurrentScene(4);
-		break;
-	case KeyCode::D6:
-		m_Scenes->SetCurrentScene(5);
-		break;
-	case KeyCode::D7:
-		m_Scenes->SetCurrentScene(6);
-		break;
-	case KeyCode::D8:
-		m_Scenes->SetCurrentScene(7);
-		break;
 	case KeyCode::Space:
-		m_AnimateLights = !m_AnimateLights;
+		//m_AnimateLights = !m_AnimateLights;
 		break;
 	case KeyCode::ShiftKey:
 		m_Shift = true;
+		break;
+	case KeyCode::Right:
+		if ((m_CurrentSceneIndex + 1) < m_Scenes.size())
+			m_CurrentSceneIndex++;
+		break;
+	case KeyCode::Left:
+		if ((m_CurrentSceneIndex - 1) > -1)
+			m_CurrentSceneIndex--;
 		break;
 	}	
 }

@@ -92,6 +92,7 @@
     <ClInclude Include="Include\External\gltf.h" />
     <ClInclude Include="Include\External\json.hpp" />
     <ClInclude Include="Include\Game.h" />
+    <ClInclude Include="Include\SceneRendering\Light.h" />
     <ClInclude Include="Include\SceneRendering\Mesh.h" />
     <ClInclude Include="Include\SceneRendering\MeshData.h" />
     <ClInclude Include="Include\SceneRendering\MeshInstance.h" />
@@ -103,7 +104,7 @@
     <ClInclude Include="Include\ResourceManagement\DynamicDescriptorHeap.h" />
     <ClInclude Include="Include\ResourceManagement\ResourceStateTracker.h" />
     <ClInclude Include="Include\RootSignature.h" />
-    <ClInclude Include="Include\SceneRendering\Scenes.h" />
+    <ClInclude Include="Include\SceneRendering\Scene.h" />
     <ClInclude Include="Include\TextureUsage.h" />
     <ClInclude Include="Include\ThreadSafeQueue.h" />
     <ClInclude Include="Include\UploadBuffer.h" />
@@ -139,7 +140,7 @@
     <ClCompile Include="Source\ResourceManagement\DynamicDescriptorHeap.cpp" />
     <ClCompile Include="Source\ResourceManagement\ResourceStateTracker.cpp" />
     <ClCompile Include="Source\RootSignature.cpp" />
-    <ClCompile Include="Source\SceneRendering\Scenes.cpp" />
+    <ClCompile Include="Source\SceneRendering\Scene.cpp" />
     <ClCompile Include="Source\UploadBuffer.cpp" />
     <ClCompile Include="Source\Utility\HighResolutionClock.cpp" />
     <ClCompile Include="Source\Window.cpp" />

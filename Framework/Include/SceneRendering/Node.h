@@ -9,6 +9,7 @@
 class Node
 {
 	friend class Scenes;
+	friend class Scene;
 public:
 	Node();
 	virtual ~Node();
