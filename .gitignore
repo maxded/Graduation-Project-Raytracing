@@ -1,9 +1,9 @@
 *.db
 *.opendb
-FrameWork/Intermediate/
-FrameWork/Library
-HybridRayTracing/Intermediate/
-HybridRayTracing/Executable/
+NeelEngine/Intermediate/
+NeelEngine/Library/
+ReflectionsDemo/Intermediate/
+ReflectionsDemo/Executable/
 *.sdf
 *.user
 .vs/
