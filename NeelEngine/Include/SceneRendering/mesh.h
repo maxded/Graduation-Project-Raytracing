@@ -30,6 +30,8 @@ public:
 
 protected:
 	void Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list);
+
+	void Unload();
 private:
 	std::string name_;
 

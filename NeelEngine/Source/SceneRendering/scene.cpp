@@ -16,7 +16,7 @@ Scene::~Scene()
 
 void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 {
-	// Load glTF 2.0 document
+	// Load glTF 2.0 document.
 	fx::gltf::Document document;
 
 	if (StringEndsWith(filename, ".gltf"))
@@ -26,18 +26,19 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 
 	document_data_.Meshes.resize(document.meshes.size());
 
-	// Generate mesh data for current document
+	// Generate mesh data for current document.
 	for (int i = 0; i < document.meshes.size(); i++)
 	{
 		document_data_.Meshes[i].Load(document, i, command_list);
 	}
 
-	const XMMATRIX root_transform = XMMatrixIdentity();
-
-	std::vector<Node> nodes(document.nodes.size());
-
+	// RESTRICTION: only load document.scenes[0] .
 	if (!document.scenes.empty())
 	{
+		const XMMATRIX root_transform = XMMatrixIdentity();
+		
+		std::vector<Node> nodes(document.nodes.size());
+		
 		if (!document.scenes[0].name.empty())
 		{
 			name_ = document.scenes[0].name;
@@ -56,16 +57,25 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 			}
 		}
 	}
+	// If no scene graph is present, display all individual meshes.
 	else
 	{
 		static uint32_t scene_number = 0;
 		name_ = "Scene " + std::to_string(scene_number);
 
-		// No scene data - display individual meshes
+		// No scene data - display individual meshes.
 		for (int32_t i = 0; i < document.meshes.size(); i++)
 		{
 			mesh_instances_.push_back({XMMatrixIdentity(), i});
 		}
+	}
+}
+
+void Scene::Unload()
+{
+	for(auto& mesh : document_data_.Meshes)
+	{
+		mesh.Unload();
 	}
 }
 

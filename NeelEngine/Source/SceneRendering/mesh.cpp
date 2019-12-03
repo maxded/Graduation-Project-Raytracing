@@ -134,7 +134,7 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 		submesh.IndexCount = i_buffer.Accessor->count;
 		DXGI_FORMAT index_format = (i_buffer.DataStride == 2) ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
 
-		command_list.CopyBuffer(submesh.VBuffer, total_buffer_size, cpu);
+		command_list.CopyBuffer(submesh.VBuffer, total_buffer_size - i_buffer.TotalSize, cpu);
 		command_list.CopyIndexBuffer(submesh.IBuffer, submesh.IndexCount, index_format, cpu + offset);
 
 		// Create views for all individual buffers
@@ -148,6 +148,15 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 
 		// Set material properties for this sub mesh
 		submesh.SetMaterial(mesh.Material());
+	}
+}
+
+void Mesh::Unload()
+{
+	for(auto& submesh : sub_meshes_)
+	{
+		submesh.VBuffer.Reset();
+		submesh.IBuffer.Reset();
 	}
 }
 

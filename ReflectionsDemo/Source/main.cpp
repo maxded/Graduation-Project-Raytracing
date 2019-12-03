@@ -20,7 +20,7 @@ int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdL
 
 	NeelEngine::Create(hInstance);
 	{
-		std::shared_ptr<ReflectionsDemo> game = std::make_shared<ReflectionsDemo>(L"Hybrid Ray Tracing Demo", 1280, 720);
+		std::shared_ptr<ReflectionsDemo> game = std::make_shared<ReflectionsDemo>(L"Reflections Demo", 1280, 720);
 		ret_code = NeelEngine::Get().Run(game);
 	}
 	NeelEngine::Destroy();

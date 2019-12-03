@@ -42,15 +42,10 @@ public:
 
 	void ToggleAnimateLights() { animate_lights_ = !animate_lights_; }
 
+	void Unload();
+
 protected:
-	// Copies and moves are not allowed.
-	/*Scene(const Scene&)				 = delete;
-	Scene& operator=(const Scene&)	 = delete;
-
-	Scene(Scene&& allocation)		 = delete;
-	Scene& operator=(Scene && other) = delete;*/
-
-	// Load glTF 2.0 scene from file
+	// Load glTF 2.0 scene from file.
 	void LoadFromFile(const std::string& filename, CommandList& command_list);
 
 	std::string name_;

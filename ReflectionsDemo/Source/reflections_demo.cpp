@@ -101,7 +101,6 @@ ReflectionsDemo::ReflectionsDemo(const std::wstring& name, int width, int height
 	  , width_(width)
 	  , height_(height)
 	  , render_scale_(1.0f)
-	  , current_scene_index_(0)
 {
 }
 
@@ -115,14 +114,10 @@ bool ReflectionsDemo::LoadContent()
 	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto command_list = command_queue->GetCommandList();
 
-	std::shared_ptr<SponzaScene> sponza_scene(new SponzaScene);
-	sponza_scene->Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Sponza.gltf", *command_list);
+	DefaultScene buggy_scene;
+	buggy_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Buggy.gltf", *command_list);
 
-	std::shared_ptr<DefaultScene> buggy_scene(new DefaultScene);
-	buggy_scene->Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Buggy.gltf", *command_list);
-
-	scenes_.emplace_back(sponza_scene);
-	scenes_.emplace_back(buggy_scene);
+	current_scene_ = std::make_unique<DefaultScene>(buggy_scene);
 
 	// Create an HDR intermediate render target.
 	DXGI_FORMAT hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -331,7 +326,7 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 		total_time = 0.0;
 	}
 
-	scenes_[current_scene_index_]->Update(e);
+	current_scene_->Update(e);
 }
 
 void ReflectionsDemo::OnRender(RenderEventArgs& e)
@@ -361,7 +356,7 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 
 	command_list->SetGraphicsDynamicConstantBuffer(RootParameters::kMaterialCb, Material::Ruby);
 
-	scenes_[current_scene_index_]->Render(*command_list);
+	current_scene_->Render(*command_list);
 
 	// Perform HDR -> SDR tonemapping directly to the Window's render target.
 	command_list->SetRenderTarget(p_window_->GetRenderTarget());
@@ -408,14 +403,38 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 		case KeyCode::ShiftKey:
 			shift_ = true;
 			break;
-		case KeyCode::Right:
-			if ((current_scene_index_ + 1) < scenes_.size())
-				current_scene_index_++;
+		case KeyCode::D1:
+			{		
+				current_scene_->Unload();
+
+				auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+				auto command_list = command_queue->GetCommandList();
+				
+				SponzaScene sponza_scene;
+				sponza_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Sponza.gltf", *command_list);
+
+				current_scene_ = std::make_unique<SponzaScene>(sponza_scene);
+
+				auto fence_value = command_queue->ExecuteCommandList(command_list);
+				command_queue->WaitForFenceValue(fence_value);
+				break;
+			}
+		case KeyCode::D2:
+		{
+			current_scene_->Unload();
+
+			auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+			auto command_list = command_queue->GetCommandList();
+
+			DefaultScene buggy_scene;
+			buggy_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Buggy.gltf", *command_list);
+
+			current_scene_ = std::make_unique<DefaultScene>(buggy_scene);
+
+			auto fence_value = command_queue->ExecuteCommandList(command_list);
+			command_queue->WaitForFenceValue(fence_value);
 			break;
-		case KeyCode::Left:
-			if ((current_scene_index_ - 1) > -1)
-				current_scene_index_--;
-			break;
+		}
 		default:
 			break;
 	}

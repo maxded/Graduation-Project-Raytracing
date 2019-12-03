@@ -48,8 +48,7 @@ protected:
 	void RescaleHDRRenderTarget(float scale);
 
 private:
-	std::vector<std::shared_ptr<Scene>>		scenes_;
-	int										current_scene_index_;
+	std::unique_ptr<Scene> current_scene_;
 
 	// HDR Render target
 	RenderTarget hdr_render_target_;
