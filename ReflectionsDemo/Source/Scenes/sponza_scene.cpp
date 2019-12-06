@@ -1,4 +1,6 @@
 #include "sponza_scene.h"
+#include "neel_engine.h"
+#include "commandqueue.h"
 
 SponzaScene::SponzaScene()
 {
@@ -8,9 +10,16 @@ SponzaScene::~SponzaScene()
 {
 }
 
-void SponzaScene::Load(const std::string& filename, CommandList& command_list)
+void SponzaScene::Load(const std::string& filename)
 {
-	LoadFromFile(filename, command_list);
+	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+	auto command_list = command_queue->GetCommandList();
+	
+	LoadFromFile(filename, *command_list);
+
+	auto fence_value = command_queue->ExecuteCommandList(command_list);
+	command_queue->WaitForFenceValue(fence_value);
+	
 }
 
 void SponzaScene::Update(UpdateEventArgs& e)

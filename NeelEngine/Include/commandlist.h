@@ -8,6 +8,8 @@
 #include <mutex> // for std::mutex
 #include <vector> // for std::vector
 
+#include "texture_usage.h"
+
 class Buffer;
 class ByteAddressBuffer;
 class ConstantBuffer;
@@ -21,6 +23,7 @@ class StructuredBuffer;
 class Texture;
 class UploadBuffer;
 class VertexBuffer;
+class GenerateMipsPSO;
 
 class CommandList
 {
@@ -160,10 +163,24 @@ public:
 	void SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY primitive_topology);
 
 	/**
+	* Load a texture by a filename.
+	*/
+	void LoadTextureFromFile(Texture& texture, const std::string& filename, TextureUsage texture_usage = TextureUsage::kAlbedo);
+
+	/**
 	 * Clear a texture.
 	 */
 	void ClearTexture(const Texture& texture, const float clear_color[4]);
 
+	/**
+	* Generate mips for the texture.
+	* The first subresource is used to generate the mip chain.
+	* Mips are automatically generated for textures loaded from files.
+	*/
+	void GenerateMips(Texture& texture);
+
+
+	
 	/**
 	 * Clear depth/stencil texture.
 	 */
@@ -368,6 +385,9 @@ private:
 	void TrackResource(Microsoft::WRL::ComPtr<ID3D12Object> object);
 	void TrackResource(const Resource& res);
 
+	// Generate mips for UAV compatible textures.
+	void GenerateMipsUAV(Texture& texture, bool is_srgb);
+
 	// Binds the current descriptor heaps to the command list.
 	void BindDescriptorHeaps();
 
@@ -412,7 +432,7 @@ private:
 	// reset.
 	TrackedObjects tracked_objects_;
 
-	// Keep track of loaded textures to avoid loading the same texture multiple times.
-	static std::map<std::wstring, ID3D12Resource*> texture_cache_;
-	static std::mutex texture_cache_mutex_;
+	// Pipeline state object for Mip map generation.
+	std::unique_ptr<GenerateMipsPSO> generate_mips_pso_;
 };
+

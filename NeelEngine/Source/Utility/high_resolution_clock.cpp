@@ -1,3 +1,5 @@
+#include "neel_engine_pch.h"
+
 #include "high_resolution_clock.h"
 
 HighResolutionClock::HighResolutionClock()

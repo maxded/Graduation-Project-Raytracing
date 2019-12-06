@@ -14,14 +14,19 @@
       $(ProjectDir)Include/Core;
       $(ProjectDir)Include/Graphics/D3D12Resources;
       $(ProjectDir)Include/Graphics/ResourceManagement;
+      $(ProjectDir)Include/Graphics/glTF;
       $(ProjectDir)Include/Utility;
       $(ProjectDir)Include/External;
       $(ProjectDir)Include/SceneRendering;
+      $(SolutionDir)DirectXTex/DirectXTex;
       (AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <link>    
-      <AdditionalLibraryDirectories>%DXSDK_DIR%\Lib%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>    
+      <AdditionalLibraryDirectories>
+      $(SolutionDir)DirectXTex/Library/$(Platform)/$(Configuration);
+      %DXSDK_DIR%\Lib;
+      %(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;DirectXTex.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>    
     </link>
   </ItemDefinitionGroup>
   <ItemGroup />

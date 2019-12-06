@@ -17,13 +17,18 @@
       $(SolutionDir)NeelEngine/Include/External;
       $(SolutionDir)NeelEngine/Include/Graphics/D3D12Resources;
       $(SolutionDir)NeelEngine/Include/Graphics/ResourceManagement;
+      $(SolutionDir)NeelEngine/Include/Graphics/glTF;
       $(SolutionDir)NeelEngine/Include/SceneRendering;
       %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_ENABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <link>    
-      <AdditionalLibraryDirectories>$(SolutionDir)NeelEngine/Library/$(Platform)/$(Configuration);%DXSDK_DIR%\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;NeelEngine.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>    
+      <AdditionalLibraryDirectories>
+      $(SolutionDir)DirectXTex/Library/$(Platform)/$(Configuration);
+      $(SolutionDir)NeelEngine/Library/$(Platform)/$(Configuration);
+      %DXSDK_DIR%\Lib;
+      %(AdditionalLibraryDirectories)</AdditionalLibraryDirectories> 
+      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;NeelEngine.lib;DirectXTex.lib;D3DCompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>    
     </link>
   </ItemDefinitionGroup>
   <ItemGroup />

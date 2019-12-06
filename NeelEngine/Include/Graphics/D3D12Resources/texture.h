@@ -103,6 +103,9 @@ public:
 	static DXGI_FORMAT GetSRGBFormat(DXGI_FORMAT format);
 	static DXGI_FORMAT GetUAVCompatableFormat(DXGI_FORMAT format);
 
+	void SetFilename(std::string filename) { filename_ = filename; }
+	const std::string& Filename() const { return filename_; } 
+
 protected:
 
 private:
@@ -119,4 +122,6 @@ private:
 	DescriptorAllocation depth_stencil_view_;
 
 	TextureUsage texture_usage_;
+
+	std::string filename_;
 };

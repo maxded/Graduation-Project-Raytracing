@@ -88,7 +88,7 @@ void Texture::Resize(uint32_t width, uint32_t height, uint32_t depth_or_array_si
 		));
 
 		// Retain the name of the resource if one was already specified.
-		d3d12_resource_->SetName(utf8_to_wstring(resource_name_).c_str());
+		d3d12_resource_->SetName(utf8_to_utf16(resource_name_).c_str());
 
 		ResourceStateTracker::AddGlobalResourceState(d3d12_resource_.Get(), D3D12_RESOURCE_STATE_COMMON);
 

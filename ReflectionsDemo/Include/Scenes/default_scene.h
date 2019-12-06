@@ -1,6 +1,6 @@
 #pragma once
 
-#include "scene.h"
+#include "gltf_scene.h"
 
 class DefaultScene : public Scene
 {
@@ -8,7 +8,7 @@ public:
 	DefaultScene();
 	virtual ~DefaultScene();
 
-	void Load(const std::string& filename, CommandList& command_list);
+	void Load(const std::string& filename);
 
 	void Update(UpdateEventArgs& e) override;
 

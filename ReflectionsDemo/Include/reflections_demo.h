@@ -3,7 +3,7 @@
 #include "game.h"
 #include "render_target.h"
 #include "root_signature.h"
-#include "scene.h"
+#include "gltf_scene.h"
 
 class ReflectionsDemo : public Game
 {

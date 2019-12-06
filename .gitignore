@@ -2,6 +2,8 @@
 *.opendb
 NeelEngine/Intermediate/
 NeelEngine/Library/
+DirectXTex/Intermediate/
+DirectXTex/Library/
 ReflectionsDemo/Intermediate/
 ReflectionsDemo/Executable/
 *.sdf

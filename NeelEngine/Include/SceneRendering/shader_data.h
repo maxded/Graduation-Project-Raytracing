@@ -11,8 +11,7 @@ struct PointLight
 		  , Intensity(1.0f)
 		  , Attenuation(0.0f)
 		  , Padding{0.0f, 0.0f}
-	{
-	}
+	{}
 
 	DirectX::XMFLOAT4 PositionWS; // Light position in world space.
 	//----------------------------------- (16 byte boundary)
@@ -39,8 +38,7 @@ struct SpotLight
 		  , SpotAngle(DirectX::XM_PIDIV2)
 		  , Attenuation(0.0f)
 		  , Padding(0.0f)
-	{
-	}
+	{}
 
 	DirectX::XMFLOAT4 PositionWS; // Light position in world space.
 	//----------------------------------- (16 byte boundary)
@@ -66,8 +64,7 @@ struct DirectionalLight
 		: DirectionWS(0.0f, 0.0f, 1.0f, 0.0f)
 		  , DirectionVS(0.0f, 0.0f, 1.0f, 0.0f)
 		  , Color(1.0f, 1.0f, 1.0f, 1.0f)
-	{
-	}
+	{}
 
 	DirectX::XMFLOAT4 DirectionWS; // Light direction in world space.
 	//----------------------------------- (16 byte boundary)
@@ -78,9 +75,34 @@ struct DirectionalLight
 	// Total:                              16 * 3 = 48 bytes 
 };
 
-struct Material2
+struct MeshConstantData
 {
-	Material2()
+	MeshConstantData()
+		: ModelMatrix{DirectX::XMMatrixIdentity()}
+		  , ModelViewMatrix{DirectX::XMMatrixIdentity()}
+		  , InverseTransposeModelViewMatrix{DirectX::XMMatrixIdentity()}
+		  , ModelViewProjectionMatrix{DirectX::XMMatrixIdentity()}
+		  , MaterialIndex(0)
+		  , Padding{}
+	{}
+
+	DirectX::XMMATRIX ModelMatrix;
+	//----------------------------------- (64 byte boundary)
+	DirectX::XMMATRIX ModelViewMatrix;
+	//----------------------------------- (64 byte boundary)
+	DirectX::XMMATRIX InverseTransposeModelViewMatrix;
+	//----------------------------------- (64 byte boundary)
+	DirectX::XMMATRIX ModelViewProjectionMatrix;
+	//----------------------------------- (64 byte boundary)
+	int MaterialIndex;
+	float Padding[3]; // Pad to 16 bytes. 
+	//----------------------------------- (16 byte boundary)
+	// Total:                              64 * 3 + 16 = 208 bytes
+};
+
+struct MeshMaterialData
+{
+	MeshMaterialData()
 		: MeshAutoColor(0.0f, 0.0f, 0.0f, 0.0f)
 		  , BaseColorFactor(0.0f, 0.0f, 0.0f, 0.0f)
 		  , BaseColorIndex(0)
@@ -93,8 +115,7 @@ struct Material2
 		  , AoStrength(0.0f)
 		  , EmissiveIndex(0)
 		  , EmissiveFactor(0.0f, 0.0f, 0.0f)
-	{
-	}
+	{}
 
 	DirectX::XMFLOAT4 MeshAutoColor;
 	//----------------------------------- (16 byte boundary)
@@ -113,6 +134,5 @@ struct Material2
 	int EmissiveIndex;
 	DirectX::XMFLOAT3 EmissiveFactor;
 	//----------------------------------- (16 byte boundary)
-
 	// Total:                              16 * 5 = 80 bytes 
 };

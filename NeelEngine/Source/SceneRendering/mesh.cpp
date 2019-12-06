@@ -2,7 +2,7 @@
 
 #include "neel_engine.h"
 #include "mesh.h"
-#include "mesh_data.h"
+#include "gltf_mesh_data.h"
 #include "camera.h"
 
 Mesh::Mesh()
@@ -21,12 +21,12 @@ void Mesh::SetWorldMatrix(const DirectX::XMFLOAT3& translation, const DirectX::X
 	const XMMATRIX r = XMMatrixRotationQuaternion(quaternion);
 	const XMMATRIX s = XMMatrixScaling(scale, scale, scale);
 
-	data_.ModelMatrix = base_transform_ * t * r * s;
+	constant_data_.ModelMatrix = base_transform_ * t * r * s;
 }
 
 void Mesh::SetWorldMatrix(const DirectX::XMMATRIX& world_matrix)
 {
-	data_.ModelMatrix = base_transform_ * world_matrix;
+	constant_data_.ModelMatrix = base_transform_ * world_matrix;
 }
 
 void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list)
@@ -164,18 +164,20 @@ void Mesh::Render(CommandList& command_list)
 {
 	Camera& camera = Camera::Get();
 
-	XMMATRIX model_view = data_.ModelMatrix * camera.GetViewMatrix();
-	XMMATRIX inverse_transpose_model_view = XMMatrixTranspose(XMMatrixInverse(nullptr, model_view));
-	XMMATRIX model_view_projection = data_.ModelMatrix * camera.GetViewMatrix() * camera.GetProjectionMatrix();
+	XMMATRIX model_view						= constant_data_.ModelMatrix * camera.GetViewMatrix();
+	XMMATRIX inverse_transpose_model_view	= XMMatrixTranspose(XMMatrixInverse(nullptr, model_view));
+	XMMATRIX model_view_projection			= constant_data_.ModelMatrix * camera.GetViewMatrix() * camera.GetProjectionMatrix();
 
-	data_.ModelViewMatrix = model_view;
-	data_.InverseTransposeModelViewMatrix = inverse_transpose_model_view;
-	data_.ModelViewProjectionMatrix = model_view_projection;
-
-	command_list.SetGraphicsDynamicConstantBuffer(0, data_);
+	constant_data_.ModelViewMatrix = model_view;
+	constant_data_.InverseTransposeModelViewMatrix = inverse_transpose_model_view;
+	constant_data_.ModelViewProjectionMatrix = model_view_projection;
 
 	for (auto& submesh : sub_meshes_)
 	{
+
+		//constant_data_.MaterialIndex 
+		command_list.SetGraphicsDynamicConstantBuffer(0, constant_data_);
+		
 		command_list.SetPrimitiveTopology(submesh.Topology);
 		command_list.SetVertexBuffer(0, submesh.VBuffer);
 
@@ -194,7 +196,7 @@ void Mesh::Render(CommandList& command_list)
 void Mesh::SetBaseTransform(const DirectX::XMMATRIX& base_transform)
 {
 	base_transform_ = base_transform;
-	data_.ModelMatrix = base_transform_;
+	constant_data_.ModelMatrix = base_transform_;
 }
 
 void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)

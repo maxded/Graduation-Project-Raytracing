@@ -1,11 +1,13 @@
 #pragma once
 
-#include <cstdint>
+#include <locale>
 #include <codecvt>
+#include <cstdint>
 #include <string>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h> // For HRESULT
+#include <comdef.h> // For _com_error class (used to decode HR result codes).
 
 // From DXSampleHelper.h 
 // Source: https://github.com/Microsoft/DirectX-Graphics-Samples
@@ -13,7 +15,10 @@ inline void ThrowIfFailed(HRESULT hr)
 {
 	if (FAILED(hr))
 	{
-		throw std::exception();
+		_com_error err(hr);
+		OutputDebugString(err.ErrorMessage());
+
+		throw std::exception(err.ErrorMessage());
 	}
 }
 
@@ -307,17 +312,21 @@ inline bool StringEndsWith(const std::string& subject, const std::string& suffix
 }
 
 // convert UTF-8 string to wstring
-inline std::wstring utf8_to_wstring(const std::string& str)
+inline std::wstring utf8_to_utf16(const std::string& str)
 {
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-	return myconv.from_bytes(str);
-}
+	if (str.empty())
+		return std::wstring();
 
-// convert wstring to UTF-8 string
-inline std::string wstring_to_utf8(const std::wstring& str)
-{
-	std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
-	return myconv.to_bytes(str);
+	size_t chars_needed = ::MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), nullptr, 0);
+	if (chars_needed == 0)
+		throw std::runtime_error("Failed converting UTF-8 string to UTF-16");
+
+	std::vector<wchar_t> buffer(chars_needed);
+	int chars_converted = ::MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), &buffer[0], buffer.size());
+	if (chars_converted == 0)
+		throw std::runtime_error("Failed converting UTF-8 string to UTF-16");
+
+	return std::wstring(&buffer[0], chars_converted);
 }
 
 // Clamp a value between a min and max range.

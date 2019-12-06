@@ -118,7 +118,7 @@ void Resource::SetName(const std::string& name)
 	resource_name_ = name;
 	if (d3d12_resource_ && !resource_name_.empty())
 	{
-		d3d12_resource_->SetName(utf8_to_wstring(resource_name_).c_str());
+		d3d12_resource_->SetName(utf8_to_utf16(resource_name_).c_str());
 	}
 }
 

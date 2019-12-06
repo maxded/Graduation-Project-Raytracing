@@ -21,7 +21,7 @@ public:
 	void SetWorldMatrix(const DirectX::XMFLOAT3& translation, const DirectX::XMVECTOR& quaternion, float scale);
 	void SetWorldMatrix(const DirectX::XMMATRIX& world_matrix);
 
-	void Render(CommandList& commandlist);
+	void Render(CommandList& command_list);
 
 	static const UINT vertex_slot_ = 0;
 	static const UINT normal_slot_ = 1;
@@ -33,48 +33,27 @@ protected:
 
 	void Unload();
 private:
-	std::string name_;
-
+	DirectX::XMMATRIX	base_transform_;
+	std::string			name_;
+	
 	struct SubMesh
 	{
 		SubMesh()
-			: SOptions{}
+			: IndexCount(0)
 			  , Topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
-			  , IndexCount(0)
-		{
-		}
+			  , SOptions{}
+		{}
 
 		void SetMaterial(const MaterialData& material_data);
 
-		VertexBuffer VBuffer;
-		IndexBuffer IBuffer;
-
-		UINT IndexCount;
-		D3D_PRIMITIVE_TOPOLOGY Topology;
-
-		Material2 Material;
-		ShaderOptions SOptions;
+		VertexBuffer			VBuffer;
+		IndexBuffer				IBuffer;
+		UINT					IndexCount;
+		D3D_PRIMITIVE_TOPOLOGY  Topology;
+		MeshMaterialData		Material;
+		ShaderOptions			SOptions;
 	};
-
 	std::vector<SubMesh> sub_meshes_;
 
-	struct ConstantData
-	{
-		ConstantData()
-			: ModelMatrix{DirectX::XMMatrixIdentity()}
-			  , ModelViewMatrix{DirectX::XMMatrixIdentity()}
-			  , InverseTransposeModelViewMatrix{DirectX::XMMatrixIdentity()}
-			  , ModelViewProjectionMatrix{DirectX::XMMatrixIdentity()}
-		{
-		}
-
-		DirectX::XMMATRIX ModelMatrix;
-		DirectX::XMMATRIX ModelViewMatrix;
-		DirectX::XMMATRIX InverseTransposeModelViewMatrix;
-		DirectX::XMMATRIX ModelViewProjectionMatrix;
-	};
-
-	ConstantData data_;
-
-	DirectX::XMMATRIX base_transform_;
+	MeshConstantData constant_data_;
 };

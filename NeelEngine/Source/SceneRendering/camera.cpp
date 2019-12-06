@@ -1,3 +1,5 @@
+#include "neel_engine_pch.h"
+
 #include "camera.h"
 
 using namespace DirectX;

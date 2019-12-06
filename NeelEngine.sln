@@ -9,6 +9,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReflectionsDemo", "Reflecti
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NeelEngine", "NeelEngine\NeelEngine.vcxproj", "{F481DBD2-6580-492B-B2F8-309AC54E5693}"
+	ProjectSection(ProjectDependencies) = postProject
+		{023A52DB-4BE6-4F36-BD8E-5E1DB6B95998} = {023A52DB-4BE6-4F36-BD8E-5E1DB6B95998}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTex", "DirectXTex\DirectXTex.vcxproj", "{023A52DB-4BE6-4F36-BD8E-5E1DB6B95998}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,6 +29,10 @@ Global
 		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Debug|x64.Build.0 = Debug|x64
 		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Release|x64.ActiveCfg = Release|x64
 		{F481DBD2-6580-492B-B2F8-309AC54E5693}.Release|x64.Build.0 = Release|x64
+		{023A52DB-4BE6-4F36-BD8E-5E1DB6B95998}.Debug|x64.ActiveCfg = Debug|x64
+		{023A52DB-4BE6-4F36-BD8E-5E1DB6B95998}.Debug|x64.Build.0 = Debug|x64
+		{023A52DB-4BE6-4F36-BD8E-5E1DB6B95998}.Release|x64.ActiveCfg = Release|x64
+		{023A52DB-4BE6-4F36-BD8E-5E1DB6B95998}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -81,16 +81,12 @@ TonemapParameters g_tonemap_parameters;
 // to use these as root indices in the root signature.
 enum RootParameters
 {
-	kMatricesCb,
-	// ConstantBuffer<Mat> MatCB : register(b0);
-	kMaterialCb,
-	// ConstantBuffer<Material> MaterialCB : register( b0, space1 );   
-	kLightPropertiesCb,
-	// ConstantBuffer<LightProperties> LightPropertiesCB : register( b1 );
-	kPointLights,
-	// StructuredBuffer<PointLight> PointLights : register( t0 );
-	kSpotLights,
-	// StructuredBuffer<SpotLight> SpotLights : register( t1 );
+	kMeshConstantBuffer,		// ConstantBuffer<Mat> MatCB : register(b0);
+	kMeshMaterialBuffer,		// ConstantBuffer<MaterialFake> MaterialCB : register( b0, space1 );   
+	kLightPropertiesCb,			// ConstantBuffer<LightProperties> LightPropertiesCB : register( b1 );
+	kPointLights,				// StructuredBuffer<PointLight> PointLights : register( t0 );
+	kSpotLights,				// StructuredBuffer<SpotLight> SpotLights : register( t1 );
+	kTextures,					// Texture2D DiffuseTexture : register( t2 );
 	kNumRootParameters
 };
 
@@ -113,11 +109,6 @@ bool ReflectionsDemo::LoadContent()
 	auto device = NeelEngine::Get().GetDevice();
 	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
 	auto command_list = command_queue->GetCommandList();
-
-	DefaultScene buggy_scene;
-	buggy_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Buggy.gltf", *command_list);
-
-	current_scene_ = std::make_unique<DefaultScene>(buggy_scene);
 
 	// Create an HDR intermediate render target.
 	DXGI_FORMAT hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -176,24 +167,21 @@ bool ReflectionsDemo::LoadContent()
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-		//CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
 
 		CD3DX12_ROOT_PARAMETER1 root_parameters[RootParameters::kNumRootParameters];
-		root_parameters[RootParameters::kMatricesCb].InitAsConstantBufferView(
-			0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
-		root_parameters[RootParameters::kMaterialCb].InitAsConstantBufferView(
-			0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::kLightPropertiesCb].InitAsConstants(
-			sizeof(Scene::SceneLightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::kPointLights].InitAsShaderResourceView(
-			0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::kSpotLights].InitAsShaderResourceView(
-			1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::kMeshConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		root_parameters[RootParameters::kMeshMaterialBuffer].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::kLightPropertiesCb].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::kPointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::kSpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::kTextures].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
 
+		CD3DX12_STATIC_SAMPLER_DESC linear_repeat_sampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);
+		
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(RootParameters::kNumRootParameters, root_parameters, 0, nullptr,
-		                                  root_signature_flags);
-
+		root_signature_description.Init_1_1(RootParameters::kNumRootParameters, root_parameters, 1, &linear_repeat_sampler, root_signature_flags);
+		
 		hdr_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 
 		// Setup the HDR pipeline State.
@@ -295,6 +283,11 @@ bool ReflectionsDemo::LoadContent()
 	auto fence_value = command_queue->ExecuteCommandList(command_list);
 	command_queue->WaitForFenceValue(fence_value);
 
+	SponzaScene sponza_scene;
+	sponza_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Sponza\\Sponza.gltf");
+
+	current_scene_ = std::make_unique<SponzaScene>(sponza_scene);
+
 	return true;
 }
 
@@ -354,7 +347,7 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 	command_list->SetPipelineState(hdr_pipeline_state_);
 	command_list->SetGraphicsRootSignature(hdr_root_signature_);
 
-	command_list->SetGraphicsDynamicConstantBuffer(RootParameters::kMaterialCb, Material::Ruby);
+	command_list->SetGraphicsDynamicConstantBuffer(RootParameters::kMeshMaterialBuffer, MaterialFake::Ruby);
 
 	current_scene_->Render(*command_list);
 
@@ -388,10 +381,10 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 		case KeyCode::Enter:
 			if (e.Alt)
 			{
-			case KeyCode::F11:
-				{
+				case KeyCode::F11:
+			{
 				p_window_->ToggleFullscreen();
-				}
+			}
 				break;
 			}
 		case KeyCode::V:
@@ -404,35 +397,25 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 			shift_ = true;
 			break;
 		case KeyCode::D1:
-			{		
-				current_scene_->Unload();
+		{		
+			current_scene_->Unload();
+			current_scene_ = nullptr;
+			
+			SponzaScene sponza_scene;
+			sponza_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Sponza\\Sponza.gltf");
 
-				auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
-				auto command_list = command_queue->GetCommandList();
-				
-				SponzaScene sponza_scene;
-				sponza_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Sponza.gltf", *command_list);
-
-				current_scene_ = std::make_unique<SponzaScene>(sponza_scene);
-
-				auto fence_value = command_queue->ExecuteCommandList(command_list);
-				command_queue->WaitForFenceValue(fence_value);
-				break;
-			}
+			current_scene_ = std::make_unique<SponzaScene>(sponza_scene);
+			break;
+		}
 		case KeyCode::D2:
 		{
 			current_scene_->Unload();
+			current_scene_ = nullptr;
 
-			auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
-			auto command_list = command_queue->GetCommandList();
+			DefaultScene scifi_helmet_scene;
+			scifi_helmet_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\SciFiHelmet\\SciFiHelmet.gltf");
 
-			DefaultScene buggy_scene;
-			buggy_scene.Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Buggy.gltf", *command_list);
-
-			current_scene_ = std::make_unique<DefaultScene>(buggy_scene);
-
-			auto fence_value = command_queue->ExecuteCommandList(command_list);
-			command_queue->WaitForFenceValue(fence_value);
+			current_scene_ = std::make_unique<DefaultScene>(scifi_helmet_scene);
 			break;
 		}
 		default:

@@ -2,9 +2,9 @@
 
 #include <DirectXMath.h>
 
-struct Material
+struct MaterialFake
 {
-	Material(
+	MaterialFake(
 		DirectX::XMFLOAT4 emissive = { 0.0f, 0.0f, 0.0f, 1.0f },
 		DirectX::XMFLOAT4 ambient = { 0.1f, 0.1f, 0.1f, 1.0f },
 		DirectX::XMFLOAT4 diffuse = { 1.0f, 1.0f, 1.0f, 1.0f },
@@ -33,36 +33,36 @@ struct Material
 	// Total:                              16 * 5 = 80 bytes
 
 	// Define some interesting materials.
-	static const Material Red;
-	static const Material Green;
-	static const Material Blue;
-	static const Material Cyan;
-	static const Material Magenta;
-	static const Material Yellow;
-	static const Material White;
-	static const Material Black;
-	static const Material Emerald;
-	static const Material Jade;
-	static const Material Obsidian;
-	static const Material Pearl;
-	static const Material Ruby;
-	static const Material Turquoise;
-	static const Material Brass;
-	static const Material Bronze;
-	static const Material Chrome;
-	static const Material Copper;
-	static const Material Gold;
-	static const Material Silver;
-	static const Material BlackPlastic;
-	static const Material CyanPlastic;
-	static const Material GreenPlastic;
-	static const Material RedPlastic;
-	static const Material WhitePlastic;
-	static const Material YellowPlastic;
-	static const Material BlackRubber;
-	static const Material CyanRubber;
-	static const Material GreenRubber;
-	static const Material RedRubber;
-	static const Material WhiteRubber;
-	static const Material YellowRubber;
+	static const MaterialFake Red;
+	static const MaterialFake Green;
+	static const MaterialFake Blue;
+	static const MaterialFake Cyan;
+	static const MaterialFake Magenta;
+	static const MaterialFake Yellow;
+	static const MaterialFake White;
+	static const MaterialFake Black;
+	static const MaterialFake Emerald;
+	static const MaterialFake Jade;
+	static const MaterialFake Obsidian;
+	static const MaterialFake Pearl;
+	static const MaterialFake Ruby;
+	static const MaterialFake Turquoise;
+	static const MaterialFake Brass;
+	static const MaterialFake Bronze;
+	static const MaterialFake Chrome;
+	static const MaterialFake Copper;
+	static const MaterialFake Gold;
+	static const MaterialFake Silver;
+	static const MaterialFake BlackPlastic;
+	static const MaterialFake CyanPlastic;
+	static const MaterialFake GreenPlastic;
+	static const MaterialFake RedPlastic;
+	static const MaterialFake WhitePlastic;
+	static const MaterialFake YellowPlastic;
+	static const MaterialFake BlackRubber;
+	static const MaterialFake CyanRubber;
+	static const MaterialFake GreenRubber;
+	static const MaterialFake RedRubber;
+	static const MaterialFake WhiteRubber;
+	static const MaterialFake YellowRubber;
 };
