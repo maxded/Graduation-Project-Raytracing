@@ -29,6 +29,18 @@ void Mesh::SetWorldMatrix(const DirectX::XMMATRIX& world_matrix)
 	constant_data_.ModelMatrix = base_transform_ * world_matrix;
 }
 
+std::vector<ShaderOptions> Mesh::RequiredShaderOptions() const
+{
+	std::vector<ShaderOptions> requiredShaderOptions{};
+
+	for (const auto& submesh : sub_meshes_)
+	{
+		requiredShaderOptions.push_back(submesh.ShaderConfigurations);
+	}
+
+	return requiredShaderOptions;
+}
+
 void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list)
 {
 	auto device = NeelEngine::Get().GetDevice();
@@ -160,7 +172,7 @@ void Mesh::Unload()
 	}
 }
 
-void Mesh::Render(CommandList& command_list)
+void Mesh::Render(RenderContext& render_context)
 {
 	Camera& camera = Camera::Get();
 
@@ -174,21 +186,26 @@ void Mesh::Render(CommandList& command_list)
 
 	for (auto& submesh : sub_meshes_)
 	{
+		const ShaderOptions options = (render_context.OverrideOptions == ShaderOptions::kNone ? submesh.ShaderConfigurations : render_context.OverrideOptions);
+		if (options != render_context.CurrentOptions)
+		{
+			render_context.CommandList.SetPipelineState(render_context.PipelineStateMap[options]);
+			render_context.CurrentOptions = options;
+		}
 
-		//constant_data_.MaterialIndex 
-		command_list.SetGraphicsDynamicConstantBuffer(0, constant_data_);
+		render_context.CommandList.SetGraphicsDynamicConstantBuffer(0, constant_data_);
 		
-		command_list.SetPrimitiveTopology(submesh.Topology);
-		command_list.SetVertexBuffer(0, submesh.VBuffer);
+		render_context.CommandList.SetPrimitiveTopology(submesh.Topology);
+		render_context.CommandList.SetVertexBuffer(0, submesh.VBuffer);
 
 		if (submesh.IndexCount > 0)
 		{
-			command_list.SetIndexBuffer(submesh.IBuffer);
-			command_list.DrawIndexed(submesh.IndexCount, 1, 0, 0, 0);
+			render_context.CommandList.SetIndexBuffer(submesh.IBuffer);
+			render_context.CommandList.DrawIndexed(submesh.IndexCount, 1, 0, 0, 0);
 		}
 		else
 		{
-			command_list.Draw(submesh.VBuffer.GetNumVertices(), 1, 0, 0);
+			render_context.CommandList.Draw(submesh.VBuffer.GetNumVertices(), 1, 0, 0);
 		}
 	}
 }
@@ -241,17 +258,12 @@ void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)
 		if (Material.EmissiveIndex >= 0)
 			options |= ShaderOptions::HAS_EMISSIVEMAP;
 
-		if (options == ShaderOptions::kNone)
-		{
-			options = ShaderOptions::USE_FACTORS_ONLY;
-		}
-
-		SOptions = options;
+		ShaderConfigurations = options;
 	}
 	else
 	{
 		// Use a default material
-		SOptions = ShaderOptions::USE_FACTORS_ONLY;
+		ShaderConfigurations = ShaderOptions::kNone;
 		Material.BaseColorFactor = DirectX::XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 		Material.MetallicFactor = 0;
 		Material.RoughnessFactor = 0.5f;

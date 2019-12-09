@@ -90,9 +90,9 @@ void NeelEngine::Initialize()
 		throw std::exception("DXGI adapter enumeration failed.");
 	}
 
-	direct_command_queue_ = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	compute_command_queue_ = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
-	copy_command_queue_ = std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COPY);
+	direct_command_queue_	= std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	compute_command_queue_	= std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+	copy_command_queue_		= std::make_shared<CommandQueue>(D3D12_COMMAND_LIST_TYPE_COPY);
 
 	tearing_supported_ = CheckTearingSupport();
 

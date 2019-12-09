@@ -31,13 +31,19 @@ public:
 		uint32_t NumDirectionalLights;
 	};
 
+	virtual void Load(const std::string& filename) = 0;
+
 	/**
 	* Scene update for generic lighting setup
 	* Override in base class for custom behaviour
 	*/
 	virtual void Update(UpdateEventArgs& e);
 
+	virtual void PrepareRender(CommandList& command_list);
+
 	virtual void Render(CommandList& command_list);
+
+	virtual RenderTarget& GetRenderTarget() = 0;
 
 	void SetAnimateLights(bool animate) { animate_lights_ = animate; }
 
@@ -71,7 +77,6 @@ protected:
 		std::vector<Texture> Textures;
 	};
 
-	DocumentData document_data_;
-
+	DocumentData	document_data_;
 private:
 };

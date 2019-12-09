@@ -186,6 +186,12 @@ void Scene::Update(UpdateEventArgs& e)
 	}
 }
 
+void Scene::PrepareRender(CommandList& command_list)
+{
+}
+
 void Scene::Render(CommandList& command_list)
 {
 }
+
+

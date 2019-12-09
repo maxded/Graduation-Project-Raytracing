@@ -10,7 +10,7 @@
 
 #define WIDTH_HEIGHT_EVEN 0     // Both the width and the height of the texture are even.
 #define WIDTH_ODD_HEIGHT_EVEN 1 // The texture width is odd and the height is even.
-#define WIDTH_EVEN_HEIGHT_ODD 2 // The texture width is even and teh height is odd.
+#define WIDTH_EVEN_HEIGHT_ODD 2 // The texture width is even and the height is odd.
 #define WIDTH_HEIGHT_ODD 3      // Both the width and height of the texture are odd.
 
 struct ComputeShaderInput

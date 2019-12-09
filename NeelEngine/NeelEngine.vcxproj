@@ -87,6 +87,7 @@
     <ClInclude Include="Include\Core\neel_engine.h" />
     <ClInclude Include="Include\Graphics\generate_mips_pso.h" />
     <ClInclude Include="Include\Graphics\glTF\gltf_texture_data.h" />
+    <ClInclude Include="Include\Graphics\render_context.h" />
     <ClInclude Include="Include\SceneRendering\camera.h" />
     <ClInclude Include="Include\commandlist.h" />
     <ClInclude Include="Include\commandqueue.h" />
@@ -102,7 +103,7 @@
     <ClInclude Include="Include\External\gltf.h" />
     <ClInclude Include="Include\External\json.hpp" />
     <ClInclude Include="Include\Core\game.h" />
-    <ClInclude Include="Include\SceneRendering\material_data.h" />
+    <ClInclude Include="Include\Graphics\glTF\gltf_material_data.h" />
     <ClInclude Include="Include\SceneRendering\shader_data.h" />
     <ClInclude Include="Include\SceneRendering\mesh.h" />
     <ClInclude Include="Include\Graphics\glTF\gltf_mesh_data.h" />

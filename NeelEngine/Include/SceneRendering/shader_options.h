@@ -9,17 +9,15 @@ enum class ShaderOptions : uint64_t
 {
 	// clang-format off
 	kNone = 0,
-	USE_AUTO_COLOR = (1u << 0u),
-	USE_FACTORS_ONLY = (1u << 1u),
-	USE_MANUAL_SRGB = (1u << 2u),
-	USE_IBL = (1u << 3u),
-	HAS_BASECOLORMAP = (1u << 4u),
-	HAS_TANGENTS = (1u << 5u),
-	HAS_NORMALMAP = (1u << 6u),
-	HAS_METALROUGHNESSMAP = (1u << 7u),
-	HAS_OCCLUSIONMAP = (1u << 8u),
-	HAS_OCCLUSIONMAP_COMBINED = (1u << 9u),
-	HAS_EMISSIVEMAP = (1u << 10u)
+	USE_AUTO_COLOR				= (1u << 0u),
+	USE_MANUAL_SRGB				= (1u << 1u),
+	HAS_BASECOLORMAP			= (1u << 2u),
+	HAS_TANGENTS				= (1u << 3u),
+	HAS_NORMALMAP				= (1u << 4u),
+	HAS_METALROUGHNESSMAP		= (1u << 5u),
+	HAS_OCCLUSIONMAP			= (1u << 6u),
+	HAS_OCCLUSIONMAP_COMBINED	= (1u << 7u),
+	HAS_EMISSIVEMAP				= (1u << 8u)
 };
 
 inline constexpr ShaderOptions operator|(ShaderOptions a, ShaderOptions b) noexcept
@@ -70,17 +68,9 @@ inline std::vector<std::string> GetShaderDefines(ShaderOptions options)
 	{
 		defines.emplace_back("USE_AUTO_COLOR");
 	}
-	if (IsSet(options, ShaderOptions::USE_FACTORS_ONLY))
-	{
-		defines.emplace_back("USE_FACTORS_ONLY");
-	}
 	if (IsSet(options, ShaderOptions::USE_MANUAL_SRGB))
 	{
 		defines.emplace_back("USE_MANUAL_SRGB");
-	}
-	if (IsSet(options, ShaderOptions::USE_IBL))
-	{
-		defines.emplace_back("USE_IBL");
 	}
 	if (IsSet(options, ShaderOptions::HAS_BASECOLORMAP))
 	{

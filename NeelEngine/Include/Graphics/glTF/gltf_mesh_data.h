@@ -2,7 +2,7 @@
 
 #include <gltf.h>
 
-#include "material_data.h"
+#include "gltf_material_data.h"
 
 class MeshData
 {

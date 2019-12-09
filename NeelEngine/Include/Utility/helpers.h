@@ -4,10 +4,14 @@
 #include <codecvt>
 #include <cstdint>
 #include <string>
+#include <d3dcompiler.h>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h> // For HRESULT
 #include <comdef.h> // For _com_error class (used to decode HR result codes).
+
+#include "shader_options.h"
+#include "d3dx12.h"
 
 // From DXSampleHelper.h 
 // Source: https://github.com/Microsoft/DirectX-Graphics-Samples
@@ -334,4 +338,46 @@ template <typename T>
 inline constexpr const T& clamp(const T& val, const T& min = T(0), const T& max = T(1))
 {
 	return val < min ? min : val > max ? max : val;
+}
+
+
+
+inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(std::wstring const& filename, std::string const& entry_point, std::string const& target, D3D_SHADER_MACRO const* defines)
+{
+	UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if defined(DEBUG) || defined(_DEBUG)
+	compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	compileFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
+#endif
+
+	Microsoft::WRL::ComPtr<ID3DBlob> byteCode{};
+	Microsoft::WRL::ComPtr<ID3DBlob> errors{};
+	HRESULT result = D3DCompileFromFile(filename.c_str(), defines, D3D_COMPILE_STANDARD_FILE_INCLUDE, entry_point.c_str(), target.c_str(), compileFlags, 0, &byteCode, &errors);
+
+	if (FAILED(result))
+	{
+		if (errors != NULL)
+			OutputDebugStringA((LPCSTR)errors->GetBufferPointer());
+	}
+
+	return byteCode;
+}
+
+inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShaderPerumutation(std::string const& entry_point, ShaderOptions options)
+{
+	// Keep rooted until compile completes since D3D_SHADER_MACRO is just a view over this data...
+	std::vector<std::string> defines = GetShaderDefines(options | ShaderOptions::kNone);
+
+	std::vector<D3D_SHADER_MACRO> shader_defines;
+	for (auto const& define : defines)
+	{
+		shader_defines.emplace_back(D3D_SHADER_MACRO{ define.c_str(), "1" });
+	}
+
+	shader_defines.emplace_back(D3D_SHADER_MACRO{ nullptr, nullptr });
+
+	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"C:\\Users\\mdans\\OneDrive\\Documents\\NeelEngine\\ReflectionsDemo\\Shaders\\HDR_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
+
+	return permutated_pixel_shader;
 }

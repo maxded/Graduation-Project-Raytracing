@@ -20,6 +20,7 @@ public:
 	 *  Unload demo specific content that was loaded in LoadContent.
 	 */
 	virtual void UnloadContent() override;
+
 protected:
 	/**
 	*  Update the game logic.
@@ -50,19 +51,9 @@ protected:
 private:
 	std::unique_ptr<Scene> current_scene_;
 
-	// HDR Render target
-	RenderTarget hdr_render_target_;
-
-	// Root signatures
-	RootSignature hdr_root_signature_;
+	// HDR -> SDR tone mapping Rootsignature + PSO.
 	RootSignature sdr_root_signature_;
-
-	// Pipeline State object.
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> hdr_pipeline_state_;
-	// HDR -> SDR tone mapping PSO.
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> sdr_pipeline_state_;
-
-	D3D12_RECT scissor_rect_;
 
 	// Set to true if the Shift key is pressed.
 	bool shift_;
