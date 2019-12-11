@@ -97,7 +97,9 @@ struct MeshConstantData
 	int MaterialIndex;
 	float Padding[3]; // Pad to 16 bytes. 
 	//----------------------------------- (16 byte boundary)
-	// Total:                              64 * 3 + 16 = 208 bytes
+	DirectX::XMVECTOR CameraPosition;
+	//----------------------------------- (16 byte boundary)
+	// Total:                              64 * 3 + 32 = 224 bytes
 };
 
 struct MeshMaterialData

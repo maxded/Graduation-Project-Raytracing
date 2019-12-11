@@ -3,17 +3,14 @@
 #include "commandqueue.h"
 #include "window.h"
 #include "material.h"
+#include "render_context.h"
 
 #include "helpers.h"
 
 #include <d3dcompiler.h>
-#include <iostream>
 
 SponzaScene::SponzaScene()
-	: sponza_root_signature_()
-	, hdr_render_target_()
-	, sponza_pipeline_state_map_{}
-	, scissor_rect_(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
+	: scissor_rect_(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
 }
 
@@ -86,20 +83,32 @@ void SponzaScene::Load(const std::string& filename)
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, document_data_.Textures.size(), 4);
 
-		CD3DX12_ROOT_PARAMETER1 root_parameters[RootParameters::kNumRootParameters];
-		root_parameters[RootParameters::kMeshConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-		root_parameters[RootParameters::kMaterialCB].InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::kLightPropertiesCb].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::kPointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::kSpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::kTextures].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
+		CD3DX12_ROOT_PARAMETER1 root_parameters[RootParameters::NumRootParameters];
+		root_parameters[RootParameters::MeshConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		root_parameters[RootParameters::LightPropertiesCb].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::Materials].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::PointLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::SpotLights].InitAsShaderResourceView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::DirectionalLights].InitAsShaderResourceView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::Textures].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		CD3DX12_STATIC_SAMPLER_DESC linear_repeat_sampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);
 
+		CD3DX12_STATIC_SAMPLER_DESC static_sampler
+		(
+			0, // shaderRegister
+			D3D12_FILTER_ANISOTROPIC, // filter
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressU
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressV
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressW
+			0.0f,	// mipLODBias
+			8		// maxAnisotropy
+		);
+
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(RootParameters::kNumRootParameters, root_parameters, 1, &linear_repeat_sampler, root_signature_flags);
+		root_signature_description.Init_1_1(RootParameters::NumRootParameters, root_parameters, 1, &linear_repeat_sampler, root_signature_flags);
 
 		sponza_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
@@ -111,6 +120,7 @@ void SponzaScene::Load(const std::string& filename)
 		{
 			CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE PRootSignature;
 			CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
+			CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER Rasterizer;
 			CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
 			CD3DX12_PIPELINE_STATE_STREAM_VS VS;
 			CD3DX12_PIPELINE_STATE_STREAM_PS PS;
@@ -120,18 +130,23 @@ void SponzaScene::Load(const std::string& filename)
 
 		std::vector<D3D12_INPUT_ELEMENT_DESC> input_layout =
 		{
-			{	"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, Mesh::vertex_slot_, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{	"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, Mesh::normal_slot_, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{	"TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, Mesh::tangent_slot_, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{	"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, Mesh::texcoord0_slot_, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+			{	"POSITION",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::vertex_slot_,		D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::normal_slot_,		D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"TANGENT",		0, DXGI_FORMAT_R32G32B32A32_FLOAT,	Mesh::tangent_slot_,	D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"TEXCOORD",		0, DXGI_FORMAT_R32G32_FLOAT,		Mesh::texcoord0_slot_,	D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 		};
 
 		// Load the HDR vertex shader.
 		Microsoft::WRL::ComPtr<ID3DBlob> vs;
 		ThrowIfFailed(D3DReadFileToBlob(L"HDR_VS.cso", &vs));
 
+
+		CD3DX12_RASTERIZER_DESC rasterizer_desc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		rasterizer_desc.CullMode = D3D12_CULL_MODE_FRONT;
+		
 		hdr_pipeline_state_stream.PRootSignature		= sponza_root_signature_.GetRootSignature().Get();
 		hdr_pipeline_state_stream.InputLayout			= { &input_layout[0], static_cast<UINT>(input_layout.size()) };
+		hdr_pipeline_state_stream.Rasterizer			= rasterizer_desc;
 		hdr_pipeline_state_stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		hdr_pipeline_state_stream.VS					= CD3DX12_SHADER_BYTECODE(vs.Get());
 		hdr_pipeline_state_stream.DSVFormat				= hdr_render_target_.GetDepthStencilFormat();
@@ -146,17 +161,17 @@ void SponzaScene::Load(const std::string& filename)
 		// Compile shader permutations for all required options for meshes.
 		for (const auto& mesh : document_data_.Meshes)
 		{
-			std::vector<ShaderOptions> requiredOptions = mesh.RequiredShaderOptions();
+			std::vector<ShaderOptions> required_options = mesh.RequiredShaderOptions();
 
-			for (const ShaderOptions options : requiredOptions)
+			for (const ShaderOptions options : required_options)
 			{
 				if (sponza_pipeline_state_map_[options] == nullptr)
 				{
 					Microsoft::WRL::ComPtr<ID3DBlob> ps_blob = CompileShaderPerumutation("main", options);
 					hdr_pipeline_state_stream.PS = CD3DX12_SHADER_BYTECODE(ps_blob.Get());
 
-					D3D12_PIPELINE_STATE_STREAM_DESC hdr_pipeline_state_stream_desc = { sizeof(HDRPipelineStateStream), &hdr_pipeline_state_stream };
-					ThrowIfFailed(device->CreatePipelineState(&hdr_pipeline_state_stream_desc, IID_PPV_ARGS(&sponza_pipeline_state_map_[options])));
+					D3D12_PIPELINE_STATE_STREAM_DESC state_stream_desc = { sizeof(HDRPipelineStateStream), &hdr_pipeline_state_stream };
+					ThrowIfFailed(device->CreatePipelineState(&state_stream_desc, IID_PPV_ARGS(&sponza_pipeline_state_map_[options])));
 				}			
 			}
 		}	
@@ -194,8 +209,8 @@ void SponzaScene::Render(CommandList& command_list)
 	RenderContext render_context
 	{ 
 		command_list,
-		ShaderOptions::kNone, 
-		ShaderOptions::kNone, 
+		ShaderOptions::None, 
+		ShaderOptions::None, 
 		sponza_pipeline_state_map_ 
 	};
 
@@ -205,11 +220,16 @@ void SponzaScene::Render(CommandList& command_list)
 	light_props.NumSpotLights			= static_cast<uint32_t>(spot_lights_.size());
 	light_props.NumDirectionalLights	= static_cast<uint32_t>(directional_lights_.size());
 
-	command_list.SetGraphics32BitConstants(RootParameters::kLightPropertiesCb, light_props);
-	command_list.SetGraphicsDynamicStructuredBuffer(RootParameters::kPointLights, point_lights_);
-	command_list.SetGraphicsDynamicStructuredBuffer(RootParameters::kSpotLights, spot_lights_);
+	command_list.SetGraphics32BitConstants(RootParameters::LightPropertiesCb, light_props);
+	command_list.SetGraphicsDynamicStructuredBuffer(RootParameters::PointLights, point_lights_);
+	command_list.SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, spot_lights_);
+	command_list.SetGraphicsDynamicStructuredBuffer(RootParameters::DirectionalLights, directional_lights_);
 
-	command_list.SetGraphicsDynamicConstantBuffer(RootParameters::kMaterialCB, MaterialFake::Ruby);
+	// Stage all descriptors for textures.
+	for (int i = 0; i < document_data_.Textures.size(); i++)
+	{
+		command_list.SetShaderResourceView(RootParameters::Textures, i, document_data_.Textures[i], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
 
 	// Loop over all instances of scene and render
 	for (auto& instance : mesh_instances_)

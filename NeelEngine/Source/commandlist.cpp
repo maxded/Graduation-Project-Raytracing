@@ -703,7 +703,7 @@ void CommandList::SetVertexBuffer(uint32_t slot, const VertexBuffer& vertex_buff
 
 	auto vertex_buffer_views = vertex_buffer.GetVertexBufferViews();
 
-	d3d12_command_list_->IASetVertexBuffers(slot, vertex_buffer.GetVertexBufferViews().size(), &vertex_buffer_views[0]);
+	d3d12_command_list_->IASetVertexBuffers(slot, vertex_buffer_views.size(), vertex_buffer_views.data());
 
 	TrackResource(vertex_buffer);
 }

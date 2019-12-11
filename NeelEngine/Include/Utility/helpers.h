@@ -344,30 +344,30 @@ inline constexpr const T& clamp(const T& val, const T& min = T(0), const T& max 
 
 inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(std::wstring const& filename, std::string const& entry_point, std::string const& target, D3D_SHADER_MACRO const* defines)
 {
-	UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+	UINT compile_flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
-	compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+	compile_flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
 	compileFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
 #endif
 
-	Microsoft::WRL::ComPtr<ID3DBlob> byteCode{};
+	Microsoft::WRL::ComPtr<ID3DBlob> byte_code{};
 	Microsoft::WRL::ComPtr<ID3DBlob> errors{};
-	HRESULT result = D3DCompileFromFile(filename.c_str(), defines, D3D_COMPILE_STANDARD_FILE_INCLUDE, entry_point.c_str(), target.c_str(), compileFlags, 0, &byteCode, &errors);
+	HRESULT result = D3DCompileFromFile(filename.c_str(), defines, D3D_COMPILE_STANDARD_FILE_INCLUDE, entry_point.c_str(), target.c_str(), compile_flags, 0, &byte_code, &errors);
 
 	if (FAILED(result))
 	{
-		if (errors != NULL)
-			OutputDebugStringA((LPCSTR)errors->GetBufferPointer());
+		if (errors != nullptr)
+			OutputDebugStringA(static_cast<LPCSTR>(errors->GetBufferPointer()));
 	}
 
-	return byteCode;
+	return byte_code;
 }
 
 inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShaderPerumutation(std::string const& entry_point, ShaderOptions options)
 {
 	// Keep rooted until compile completes since D3D_SHADER_MACRO is just a view over this data...
-	std::vector<std::string> defines = GetShaderDefines(options | ShaderOptions::kNone);
+	std::vector<std::string> defines = GetShaderDefines(options | ShaderOptions::None);
 
 	std::vector<D3D_SHADER_MACRO> shader_defines;
 	for (auto const& define : defines)
@@ -377,7 +377,7 @@ inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShaderPerumutation(std::string co
 
 	shader_defines.emplace_back(D3D_SHADER_MACRO{ nullptr, nullptr });
 
-	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"C:\\Users\\mdans\\OneDrive\\Documents\\NeelEngine\\ReflectionsDemo\\Shaders\\HDR_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
+	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Shaders\\HDR_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
 
 	return permutated_pixel_shader;
 }

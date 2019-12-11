@@ -31,14 +31,14 @@ void Mesh::SetWorldMatrix(const DirectX::XMMATRIX& world_matrix)
 
 std::vector<ShaderOptions> Mesh::RequiredShaderOptions() const
 {
-	std::vector<ShaderOptions> requiredShaderOptions{};
+	std::vector<ShaderOptions> required_shader_options{};
 
 	for (const auto& submesh : sub_meshes_)
 	{
-		requiredShaderOptions.push_back(submesh.ShaderConfigurations);
+		required_shader_options.push_back(submesh.ShaderConfigurations);
 	}
 
-	return requiredShaderOptions;
+	return required_shader_options;
 }
 
 void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list)
@@ -108,27 +108,27 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 		if (!cpu)
 			throw std::bad_alloc();
 
-		std::vector<uint32_t> num_elements;
-		std::vector<uint32_t> element_size;
+		std::array<size_t, 4> num_elements {0, 0, 0, 0};
+		std::array<size_t, 4 > element_size {0, 0, 0, 0};
 
 		// Copy position data to upload buffer...
 		std::memcpy(cpu, v_buffer.Data, v_buffer.TotalSize);
-		num_elements.push_back(v_buffer.Accessor->count);
-		element_size.push_back(v_buffer.DataStride);
+		num_elements[vertex_slot_] = v_buffer.Accessor->count;
+		element_size[vertex_slot_] = v_buffer.DataStride;
 		offset += v_buffer.TotalSize;
 
 		// Copy normal data to upload buffer...
 		std::memcpy(cpu + offset, n_buffer.Data, n_buffer.TotalSize);
-		num_elements.push_back(n_buffer.Accessor->count);
-		element_size.push_back(n_buffer.DataStride);
+		num_elements[normal_slot_] = n_buffer.Accessor->count;
+		element_size[normal_slot_] = n_buffer.DataStride;
 		offset += n_buffer.TotalSize;
 
 		if (t_buffer.HasData())
 		{
 			// Copy tangent data to upload buffer...
 			std::memcpy(cpu + offset, t_buffer.Data, t_buffer.TotalSize);
-			num_elements.push_back(t_buffer.Accessor->count);
-			element_size.push_back(t_buffer.DataStride);
+			num_elements[tangent_slot_] = t_buffer.Accessor->count;
+			element_size[tangent_slot_] = t_buffer.DataStride;
 			offset += t_buffer.TotalSize;
 		}
 
@@ -136,8 +136,8 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 		{
 			// Copy texcoord data to upload buffer...
 			std::memcpy(cpu + offset, c_buffer.Data, c_buffer.TotalSize);
-			num_elements.push_back(c_buffer.Accessor->count);
-			element_size.push_back(c_buffer.DataStride);
+			num_elements[texcoord0_slot_] = c_buffer.Accessor->count;
+			element_size[texcoord0_slot_] = c_buffer.DataStride;
 			offset += c_buffer.TotalSize;
 		}
 
@@ -151,7 +151,6 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 
 		// Create views for all individual buffers
 		submesh.VBuffer.CreateViews(num_elements, element_size);
-		submesh.IBuffer.CreateViews(i_buffer.Accessor->count, i_buffer.DataStride);
 
 		submesh.VBuffer.SetName(name_ + " Vertex Buffer");
 		submesh.IBuffer.SetName(name_ + " Index Buffer");
@@ -160,6 +159,12 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 
 		// Set material properties for this sub mesh
 		submesh.SetMaterial(mesh.Material());
+		materials_.push_back(submesh.Material);
+
+		if(t_buffer.HasData())
+		{
+			submesh.ShaderConfigurations |= ShaderOptions::HAS_TANGENTS;
+		}
 	}
 }
 
@@ -183,16 +188,25 @@ void Mesh::Render(RenderContext& render_context)
 	constant_data_.ModelViewMatrix = model_view;
 	constant_data_.InverseTransposeModelViewMatrix = inverse_transpose_model_view;
 	constant_data_.ModelViewProjectionMatrix = model_view_projection;
+	
+	constant_data_.ModelMatrix = XMMatrixTranspose(constant_data_.ModelMatrix);
+	constant_data_.ModelViewProjectionMatrix = XMMatrixTranspose(constant_data_.ModelViewProjectionMatrix);
+	constant_data_.CameraPosition = camera.GetTranslation();
 
+	render_context.CommandList.SetGraphicsDynamicStructuredBuffer(2, materials_);
+
+	int material_index = 0;
 	for (auto& submesh : sub_meshes_)
 	{
-		const ShaderOptions options = (render_context.OverrideOptions == ShaderOptions::kNone ? submesh.ShaderConfigurations : render_context.OverrideOptions);
+		const ShaderOptions options = (render_context.OverrideOptions == ShaderOptions::None ? submesh.ShaderConfigurations : render_context.OverrideOptions);
 		if (options != render_context.CurrentOptions)
 		{
 			render_context.CommandList.SetPipelineState(render_context.PipelineStateMap[options]);
 			render_context.CurrentOptions = options;
 		}
 
+		constant_data_.MaterialIndex = material_index;
+		
 		render_context.CommandList.SetGraphicsDynamicConstantBuffer(0, constant_data_);
 		
 		render_context.CommandList.SetPrimitiveTopology(submesh.Topology);
@@ -207,6 +221,8 @@ void Mesh::Render(RenderContext& render_context)
 		{
 			render_context.CommandList.Draw(submesh.VBuffer.GetNumVertices(), 1, 0, 0);
 		}
+
+		material_index++;
 	}
 }
 
@@ -219,7 +235,7 @@ void Mesh::SetBaseTransform(const DirectX::XMMATRIX& base_transform)
 void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)
 {
 	if (material_data.HasData())
-	{
+	{	
 		auto& m = material_data.Data();
 
 		Material.BaseColorIndex = m.pbrMetallicRoughness.baseColorTexture.index;
@@ -238,7 +254,7 @@ void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)
 		Material.EmissiveIndex = m.emissiveTexture.index;
 		Material.EmissiveFactor = XMFLOAT3(m.emissiveFactor.data());
 
-		ShaderOptions options = ShaderOptions::kNone;
+		ShaderOptions options = ShaderOptions::None;
 
 		if (Material.BaseColorIndex >= 0)
 			options |= ShaderOptions::HAS_BASECOLORMAP;
@@ -263,7 +279,7 @@ void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)
 	else
 	{
 		// Use a default material
-		ShaderConfigurations = ShaderOptions::kNone;
+		ShaderConfigurations = ShaderOptions::None;
 		Material.BaseColorFactor = DirectX::XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 		Material.MetallicFactor = 0;
 		Material.RoughnessFactor = 0.5f;

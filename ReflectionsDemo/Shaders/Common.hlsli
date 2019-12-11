@@ -1,18 +1,20 @@
 struct MeshConstantData
 {
-	matrix ModelMatrix;
+	float4x4 ModelMatrix;
 	//----------------------------------- (64 byte boundary)
-	matrix ModelViewMatrix;
+	float4x4 ModelViewMatrix;
 	//----------------------------------- (64 byte boundary)
-	matrix InverseTransposeModelViewMatrix;
+	float4x4 InverseTransposeModelViewMatrix;
 	//----------------------------------- (64 byte boundary)
-	matrix ModelViewProjectionMatrix;
+	float4x4 ModelViewProjectionMatrix;
 	//----------------------------------- (64 byte boundary)
 
 	int MaterialIndex;
 	float3 Padding;
 	//----------------------------------- (16 byte boundary)
-	// Total:                              64 * 3 + 16 = 208 bytes
+	float4 CameraPosition;
+	//----------------------------------- (16 byte boundary)
+	// Total:                              64 * 3 + 16 = 224 bytes
 };
 
 struct MaterialData
@@ -35,22 +37,6 @@ struct MaterialData
 	float3 EmissiveFactor;
 	//----------------------------------- (16 byte boundary)
 	// Total:                              16 * 5 = 80 bytes 
-};
-
-struct Material
-{
-	float4 Emissive;
-	//----------------------------------- (16 byte boundary)
-	float4 Ambient;
-	//----------------------------------- (16 byte boundary)
-	float4 Diffuse;
-	//----------------------------------- (16 byte boundary)
-	float4 Specular;
-	//----------------------------------- (16 byte boundary)
-	float  SpecularPower;
-	float3 Padding;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 5 = 80 bytes
 };
 
 struct PointLight
@@ -88,6 +74,17 @@ struct SpotLight
 	// Total:                              16 * 6 = 96 bytes
 };
 
+struct DirectionalLight
+{
+	float4 DirectionWS; // Light direction in world space.
+	//----------------------------------- (16 byte boundary)
+	float4 DirectionVS; // Light direction in view space.
+	//----------------------------------- (16 byte boundary)
+	float4 Color;
+	//----------------------------------- (16 byte boundary)
+	// Total:                              16 * 3 = 48 bytes 
+};
+
 struct LightProperties
 {
 	uint NumPointLights;
@@ -101,15 +98,18 @@ struct LightResult
 };
 
 ConstantBuffer<MeshConstantData>		MeshCB				: register(b0);
-ConstantBuffer<Material>				MaterialCB			: register(b0, space1);
 ConstantBuffer<LightProperties>			LightPropertiesCB	: register(b1);
 
-StructuredBuffer<PointLight>			PointLights			: register(t0);
-StructuredBuffer<SpotLight>				SpotLights			: register(t1);
+StructuredBuffer<MaterialData>			Materials			: register(t0);
+StructuredBuffer<PointLight>			PointLights			: register(t1);
+StructuredBuffer<SpotLight>				SpotLights			: register(t2);
+StructuredBuffer<DirectionalLight>		DirectionalLights	: register(t3);
 
-Texture2D DiffuseTexture            : register(t2);
+Texture2D Textures[73]				: register(t4);
 
 SamplerState LinearRepeatSampler    : register(s0);
+
+static const float M_PI = 3.141592653589793f;
 
 float3 LinearToSRGB(float3 x)
 {
@@ -120,88 +120,37 @@ float3 LinearToSRGB(float3 x)
 	return x < 0.0031308 ? 12.92 * x : 1.13005 * sqrt(abs(x - 0.00228)) - 0.13448 * x + 0.005719;
 }
 
-float DoDiffuse(float3 N, float3 L)
+float4 SRGBtoLINEAR(float4 srgbColor)
 {
-	return max(0, dot(N, L));
+#if MANUAL_SRGB
+	return float4(pow(srgbColor.xyz, 2.2), srgbColor.w);
+#else
+	return srgbColor;
+#endif
 }
 
-float DoSpecular(float3 V, float3 N, float3 L)
+float3 Diffuse_Lambert(float3 diffuseColor)
 {
-	float3 R = normalize(reflect(-L, N));
-	float RdotV = max(0, dot(R, V));
-
-	return pow(RdotV, MaterialCB.SpecularPower);
+	return diffuseColor / M_PI;
 }
 
-float DoAttenuation(float attenuation, float distance)
+float3 F_Schlick(float3 r0, float3 f90, float LdH)
 {
-	return 1.0f / (1.0f + attenuation * distance * distance);
+	return r0 + (f90 - r0) * pow(clamp(1.0 - LdH, 0.0, 1.0), 5.0);
 }
 
-float DoSpotCone(float3 spotDir, float3 L, float spotAngle)
+float G_Smith(float NdL, float NdV, float alphaRoughness)
 {
-	float minCos = cos(spotAngle);
-	float maxCos = (minCos + 1.0f) / 2.0f;
-	float cosAngle = dot(spotDir, -L);
-	return smoothstep(minCos, maxCos, cosAngle);
+	float a2 = alphaRoughness * alphaRoughness;
+
+	float gl = NdL + sqrt(a2 + (1.0 - a2) * (NdL * NdL));
+	float gv = NdV + sqrt(a2 + (1.0 - a2) * (NdV * NdV));
+	return 1.0f / (gl * gv); // The division by (4.0 * NdL * NdV) is unneeded with this form
 }
 
-LightResult DoPointLight(PointLight light, float3 V, float3 P, float3 N)
+float D_GGX(float NdH, float alphaRoughness)
 {
-	LightResult result;
-	float3 L = (light.PositionVS.xyz - P);
-	float d = length(L);
-	L = L / d;
-
-	float attenuation = DoAttenuation(light.Attenuation, d);
-
-	result.Diffuse = DoDiffuse(N, L) * attenuation * light.Color * light.Intensity;
-	result.Specular = DoSpecular(V, N, L) * attenuation * light.Color * light.Intensity;
-
-	return result;
-}
-
-LightResult DoSpotLight(SpotLight light, float3 V, float3 P, float3 N)
-{
-	LightResult result;
-	float3 L = (light.PositionVS.xyz - P);
-	float d = length(L);
-	L = L / d;
-
-	float attenuation = DoAttenuation(light.Attenuation, d);
-
-	float spotIntensity = DoSpotCone(light.DirectionVS.xyz, L, light.SpotAngle);
-
-	result.Diffuse = DoDiffuse(N, L) * attenuation * spotIntensity * light.Color * light.Intensity;
-	result.Specular = DoSpecular(V, N, L) * attenuation * spotIntensity * light.Color * light.Intensity;
-
-	return result;
-}
-
-LightResult DoLighting(float3 P, float3 N)
-{
-	uint i;
-
-	// Lighting is performed in view space.
-	float3 V = normalize(-P);
-
-	LightResult totalResult = (LightResult)0;
-
-	for (i = 0; i < LightPropertiesCB.NumPointLights; ++i)
-	{
-		LightResult result = DoPointLight(PointLights[i], V, P, N);
-
-		totalResult.Diffuse += result.Diffuse;
-		totalResult.Specular += result.Specular;
-	}
-
-	for (i = 0; i < LightPropertiesCB.NumSpotLights; ++i)
-	{
-		LightResult result = DoSpotLight(SpotLights[i], V, P, N);
-
-		totalResult.Diffuse += result.Diffuse;
-		totalResult.Specular += result.Specular;
-	}
-
-	return totalResult;
+	float a2 = alphaRoughness * alphaRoughness;
+	float f = (NdH * a2 - NdH) * NdH + 1.0;
+	return a2 / (M_PI * f * f);
 }

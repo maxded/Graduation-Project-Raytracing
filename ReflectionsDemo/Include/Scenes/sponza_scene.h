@@ -33,12 +33,13 @@ private:
 
 	enum RootParameters
 	{
-		kMeshConstantBuffer = 0,	// ConstantBuffer<Mat> MatCB							: register(b0);  
-		kMaterialCB,
-		kLightPropertiesCb,			// ConstantBuffer<LightProperties> LightPropertiesCB	: register( b1 );
-		kPointLights,				// StructuredBuffer<PointLight> PointLights				: register( t0 );
-		kSpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t1 );
-		kTextures,					// Texture2D DiffuseTexture								: register( t2 );
-		kNumRootParameters
+		MeshConstantBuffer = 0,	// ConstantBuffer<Mat> MatCB							: register(b0);  
+		LightPropertiesCb,		// ConstantBuffer<LightProperties> LightPropertiesCB	: register( b1 );
+		Materials,				// StructuredBuffer<MaterialData> Materials				: register( t0 );
+		PointLights,			// StructuredBuffer<PointLight> PointLights				: register( t1 );
+		SpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t2 );
+		DirectionalLights,		// StructuredBuffer<DirectionalLight> DirectionalLights : register (t3 );
+		Textures,				// Texture2D DiffuseTexture								: register( t4 );
+		NumRootParameters
 	};
 };

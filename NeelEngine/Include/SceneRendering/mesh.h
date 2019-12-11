@@ -48,7 +48,6 @@ private:
 			  , Topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
 			  , ShaderConfigurations{}
 		{}
-
 		void SetMaterial(const MaterialData& material_data);
 
 		VertexBuffer			VBuffer;
@@ -58,7 +57,10 @@ private:
 		MeshMaterialData		Material;
 		ShaderOptions			ShaderConfigurations;
 	};
+
+	
 	std::vector<SubMesh> sub_meshes_;
+	std::vector<MeshMaterialData> materials_;
 
 	MeshConstantData constant_data_;
 };

@@ -8,7 +8,7 @@
 enum class ShaderOptions : uint64_t
 {
 	// clang-format off
-	kNone = 0,
+	None = 0,
 	USE_AUTO_COLOR				= (1u << 0u),
 	USE_MANUAL_SRGB				= (1u << 1u),
 	HAS_BASECOLORMAP			= (1u << 2u),

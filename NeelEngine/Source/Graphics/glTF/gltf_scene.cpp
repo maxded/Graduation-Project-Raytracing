@@ -62,7 +62,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 		// RESTRICTION: only load document.scenes[0] .
 		if (!document.scenes.empty())
 		{
-			const XMMATRIX root_transform = XMMatrixIdentity();
+			const XMMATRIX root_transform = DirectX::XMMatrixMultiply(DirectX::XMMatrixIdentity(), DirectX::XMMatrixScaling(-1, 1, 1));
 
 			std::vector<Node> nodes(document.nodes.size());
 
@@ -121,6 +121,7 @@ void Scene::Update(UpdateEventArgs& e)
 
 	const int num_point_lights = 4;
 	const int num_spot_lights = 4;
+	const int num_directional_lights = 1;
 
 	static const XMVECTORF32 light_colors[] =
 	{
@@ -183,6 +184,20 @@ void Scene::Update(UpdateEventArgs& e)
 		l.Intensity = 1.0f;
 		l.SpotAngle = XMConvertToRadians(45.0f);
 		l.Attenuation = 0.0f;
+	}
+
+	directional_lights_.resize(num_directional_lights);
+	for(int i = 0; i < num_directional_lights; ++i)
+	{
+		DirectionalLight& l = directional_lights_[i];
+
+		XMVECTOR direction_ws = { 0.0, -1.0, 0.0, 0.0 };
+		XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
+		
+		XMStoreFloat4(&l.DirectionWS, direction_ws);
+		XMStoreFloat4(&l.DirectionVS, direction_vs);
+
+		l.Color = XMFLOAT4(light_colors[num_point_lights + i]);
 	}
 }
 

@@ -2,20 +2,22 @@
 
 #include "buffer.h"
 
+#include <array>
+
 class VertexBuffer : public Buffer
 {
 public:
 	VertexBuffer(const std::string& name = "Vertex Buffer");
 	virtual ~VertexBuffer();
 
-	virtual void CreateViews(size_t num_elements, size_t element_size) override;
+	void CreateViews(size_t num_elements, size_t element_size) override;
 
-	void CreateViews(std::vector<uint32_t> num_elements, std::vector<uint32_t> element_size);
+	void CreateViews(std::array<size_t, 4> num_elements, std::array<size_t, 4> element_size);
 
 	/**
 	 * Get the vertex buffer view for binding to the Input Assembler stage.
 	 */
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> GetVertexBufferViews() const
+	std::array<D3D12_VERTEX_BUFFER_VIEW, 4> GetVertexBufferViews() const
 	{
 		return vertex_buffer_views_;
 	}
@@ -44,5 +46,5 @@ private:
 
 	uint32_t gpu_offset_;
 
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> vertex_buffer_views_;
+	std::array<D3D12_VERTEX_BUFFER_VIEW, 4> vertex_buffer_views_;
 };
