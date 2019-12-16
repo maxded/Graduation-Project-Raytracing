@@ -80,7 +80,7 @@ struct MeshConstantData
 	MeshConstantData()
 		: ModelMatrix{DirectX::XMMatrixIdentity()}
 		  , ModelViewMatrix{DirectX::XMMatrixIdentity()}
-		  , InverseTransposeModelViewMatrix{DirectX::XMMatrixIdentity()}
+		  , InverseTransposeModelMatrix{DirectX::XMMatrixIdentity()}
 		  , ModelViewProjectionMatrix{DirectX::XMMatrixIdentity()}
 		  , MaterialIndex(0)
 		  , Padding{}
@@ -90,7 +90,7 @@ struct MeshConstantData
 	//----------------------------------- (64 byte boundary)
 	DirectX::XMMATRIX ModelViewMatrix;
 	//----------------------------------- (64 byte boundary)
-	DirectX::XMMATRIX InverseTransposeModelViewMatrix;
+	DirectX::XMMATRIX InverseTransposeModelMatrix;
 	//----------------------------------- (64 byte boundary)
 	DirectX::XMMATRIX ModelViewProjectionMatrix;
 	//----------------------------------- (64 byte boundary)
@@ -99,7 +99,7 @@ struct MeshConstantData
 	//----------------------------------- (16 byte boundary)
 	DirectX::XMVECTOR CameraPosition;
 	//----------------------------------- (16 byte boundary)
-	// Total:                              64 * 3 + 32 = 224 bytes
+	// Total:                              64 * 4 + 32 = 288 bytes
 };
 
 struct MeshMaterialData

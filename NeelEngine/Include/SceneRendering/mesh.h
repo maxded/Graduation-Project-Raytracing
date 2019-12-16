@@ -21,7 +21,7 @@ public:
 
 	void SetBaseTransform(const DirectX::XMMATRIX& base_transform);
 
-	void SetWorldMatrix(const DirectX::XMFLOAT3& translation, const DirectX::XMVECTOR& quaternion, float scale);
+	void SetWorldMatrix(const DirectX::XMFLOAT3& translation, const float rotation_y, float scale);
 	void SetWorldMatrix(const DirectX::XMMATRIX& world_matrix);
 
 	void Render(RenderContext& render_context);
@@ -32,6 +32,8 @@ public:
 	static const UINT texcoord0_slot_	= 3;
 
 	std::vector<ShaderOptions> RequiredShaderOptions() const;
+
+	std::vector<MeshMaterialData>& GetMaterials() { return materials_; }
 
 protected:
 	void Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list);
@@ -63,4 +65,6 @@ private:
 	std::vector<MeshMaterialData> materials_;
 
 	MeshConstantData constant_data_;
+
+	DirectX::XMMATRIX world_matrix_;
 };

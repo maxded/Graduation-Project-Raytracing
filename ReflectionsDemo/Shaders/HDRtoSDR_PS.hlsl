@@ -96,6 +96,5 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 		break;
 	}
 
-
-	return float4(pow(abs(SDR), 1.0f / TonemapParametersCB.Gamma), 1);
+	return float4(pow(abs(SDR), 1.0 / TonemapParametersCB.Gamma), 1.0);
 }

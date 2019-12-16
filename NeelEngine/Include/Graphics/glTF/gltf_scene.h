@@ -49,6 +49,8 @@ public:
 
 	void ToggleAnimateLights() { animate_lights_ = !animate_lights_; }
 
+	std::unique_ptr<Mesh> LoadBasicGeometry(std::string& filepath, CommandList& command_list);
+	
 	void Unload();
 
 protected:
@@ -78,5 +80,9 @@ protected:
 	};
 
 	DocumentData	document_data_;
+
+	std::unique_ptr<Mesh> cube_mesh_;
+	std::unique_ptr<Mesh> sphere_mesh_;
+	std::unique_ptr<Mesh> cone_mesh_;
 private:
 };

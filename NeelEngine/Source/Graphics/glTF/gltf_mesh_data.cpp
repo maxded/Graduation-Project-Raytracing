@@ -45,9 +45,12 @@ MeshData::BufferInfo MeshData::GetData(fx::gltf::Document const& doc, fx::gltf::
 	const fx::gltf::Buffer& buffer = doc.buffers[buffer_view.buffer];
 
 	const uint32_t data_type_size = CalculateDataTypeSize(accessor);
-	return BufferInfo{
-		&accessor, &buffer.data[static_cast<uint64_t>(buffer_view.byteOffset) + accessor.byteOffset], data_type_size,
-		accessor.count * data_type_size
+	return BufferInfo
+	{
+		&accessor
+		, &buffer.data[static_cast<uint64_t>(buffer_view.byteOffset) + accessor.byteOffset]
+		, data_type_size
+		,accessor.count * data_type_size
 	};
 }
 

@@ -22,12 +22,12 @@ VertexShaderOutput main(VertexPositionNormalTexture IN)
 {
 	VertexShaderOutput OUT;
 
-	OUT.Position	= mul(float4(IN.Position, 1.0f), MeshCB.ModelViewProjectionMatrix);
+	OUT.Position	= mul(MeshCB.ModelViewProjectionMatrix, float4(IN.Position, 1.0f));
 
-	OUT.PositionW	= mul(IN.Position, (float3x3)MeshCB.ModelMatrix);
-	OUT.NormalW		= mul(IN.Normal, (float3x3)MeshCB.ModelMatrix);
-	OUT.TangentW	= mul(IN.Tangent.xyz, (float3x3)MeshCB.ModelMatrix);
-	OUT.BinormalW = cross(OUT.NormalW, OUT.TangentW) *1.0;
+	OUT.PositionW	= mul((float3x3)MeshCB.ModelMatrix, IN.Position);
+	OUT.NormalW		= mul((float3x3)MeshCB.InverseTransposeModelMatrix, IN.Normal);
+	OUT.TangentW	= mul((float3x3)MeshCB.ModelMatrix, IN.Tangent.xyz);
+	OUT.BinormalW	= cross(OUT.NormalW, OUT.TangentW.xyz) * IN.Tangent.w;
 	OUT.TexCoord	= IN.TexCoord;
 
 	return OUT;

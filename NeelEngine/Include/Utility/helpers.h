@@ -348,7 +348,7 @@ inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(std::wstring const& filena
 #if defined(DEBUG) || defined(_DEBUG)
 	compile_flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
-	compileFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
+	compile_flags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
 #endif
 
 	Microsoft::WRL::ComPtr<ID3DBlob> byte_code{};
@@ -377,7 +377,7 @@ inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShaderPerumutation(std::string co
 
 	shader_defines.emplace_back(D3D_SHADER_MACRO{ nullptr, nullptr });
 
-	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Shaders\\HDR_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
+	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"Shaders/HDR_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
 
 	return permutated_pixel_shader;
 }

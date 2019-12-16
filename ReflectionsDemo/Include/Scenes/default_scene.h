@@ -22,22 +22,24 @@ public:
 protected:
 
 private:
-	RootSignature	sponza_root_signature_;
+	RootSignature	default_root_signature_;
 	RenderTarget	hdr_render_target_;
 
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> default_pipeline_state_;
+	// Map containing all different pipeline states for each mesh with different shader options (permutations).
+	std::unordered_map<ShaderOptions, Microsoft::WRL::ComPtr<ID3D12PipelineState>> default_pipeline_state_map_;
 
 	D3D12_RECT scissor_rect_;
 
 	enum RootParameters
 	{
-		kMeshConstantBuffer,		// ConstantBuffer<Mat> MatCB							: register(b0);
-		kMeshMaterialBuffer,		// ConstantBuffer<MaterialFake> MaterialCB				: register( b0, space1 );   
-		kLightPropertiesCb,			// ConstantBuffer<LightProperties> LightPropertiesCB	: register( b1 );
-		kPointLights,				// StructuredBuffer<PointLight> PointLights				: register( t0 );
-		kSpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t1 );
-		kTextures,					// Texture2D DiffuseTexture								: register( t2 );
-		kNumRootParameters
+		MeshConstantBuffer = 0,	// ConstantBuffer<Mat> MatCB							: register(b0);  
+		LightPropertiesCb,		// ConstantBuffer<LightProperties> LightPropertiesCB	: register( b1 );
+		Materials,				// StructuredBuffer<MaterialData> Materials				: register( t0 );
+		PointLights,			// StructuredBuffer<PointLight> PointLights				: register( t1 );
+		SpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t2 );
+		DirectionalLights,		// StructuredBuffer<DirectionalLight> DirectionalLights : register (t3 );
+		Textures,				// Texture2D DiffuseTexture								: register( t4 );
+		NumRootParameters
 	};
 
 };

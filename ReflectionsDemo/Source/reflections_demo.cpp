@@ -86,6 +86,7 @@ ReflectionsDemo::ReflectionsDemo(const std::wstring& name, int width, int height
 
 ReflectionsDemo::~ReflectionsDemo()
 {
+	
 }
 
 bool ReflectionsDemo::LoadContent()
@@ -95,7 +96,7 @@ bool ReflectionsDemo::LoadContent()
 	auto command_list = command_queue->GetCommandList();
 
 	current_scene_ = std::make_unique<SponzaScene>();
-	current_scene_->Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\SponzaNoTangents\\Sponza.gltf");
+	current_scene_->Load("Assets/Sponza/Sponza.gltf");
 
 	// Create the SDR Root Signature
 	{
@@ -256,14 +257,14 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 		{		
 			current_scene_->Unload();
 			current_scene_ = std::make_unique<SponzaScene>();
-			current_scene_->Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\Sponza\\Sponza.gltf");
+			current_scene_->Load("Assets/Sponza/Sponza.gltf");
 			break;
 		}
 		case KeyCode::D2:
 		{
 			current_scene_->Unload();
 			current_scene_ = std::make_unique<DefaultScene>();
-			current_scene_->Load("C:\\Users\\mdans\\Documents\\NeelEngine\\ReflectionsDemo\\Assets\\SciFiHelmet\\SciFiHelmet.gltf");
+			current_scene_->Load("Assets/SciFiHelmet/Sponza.gltf");
 			break;
 		}
 		default:

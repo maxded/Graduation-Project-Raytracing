@@ -306,17 +306,17 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> Window::CreateSwapChain()
 	ThrowIfFailed(CreateDXGIFactory2(create_factory_flags, IID_PPV_ARGS(&dxgi_factory4)));
 
 	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
-	swap_chain_desc.Width = client_width_;
-	swap_chain_desc.Height = client_height_;
-	swap_chain_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swap_chain_desc.Stereo = FALSE;
-	swap_chain_desc.SampleDesc = {1, 0};
+	swap_chain_desc.Width		= client_width_;
+	swap_chain_desc.Height		= client_height_;
+	swap_chain_desc.Format		= DXGI_FORMAT_R8G8B8A8_UNORM;
+	swap_chain_desc.Stereo		= FALSE;
+	swap_chain_desc.SampleDesc	= {1, 0};
 	swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swap_chain_desc.BufferCount = buffer_count_;
-	swap_chain_desc.Scaling = DXGI_SCALING_STRETCH;
-	swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swap_chain_desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-	swap_chain_desc.Flags = is_tearing_supported_ ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+	swap_chain_desc.Scaling		= DXGI_SCALING_STRETCH;
+	swap_chain_desc.SwapEffect	= DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	swap_chain_desc.AlphaMode	= DXGI_ALPHA_MODE_UNSPECIFIED;
+	swap_chain_desc.Flags		= is_tearing_supported_ ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
 	ID3D12CommandQueue* p_command_queue = app.GetCommandQueue()->GetD3D12CommandQueue().Get();
 

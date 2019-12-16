@@ -130,23 +130,19 @@ void SponzaScene::Load(const std::string& filename)
 
 		std::vector<D3D12_INPUT_ELEMENT_DESC> input_layout =
 		{
-			{	"POSITION",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::vertex_slot_,		D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{	"NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::normal_slot_,		D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{	"TANGENT",		0, DXGI_FORMAT_R32G32B32A32_FLOAT,	Mesh::tangent_slot_,	D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{	"TEXCOORD",		0, DXGI_FORMAT_R32G32_FLOAT,		Mesh::texcoord0_slot_,	D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+			{	"POSITION",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::vertex_slot_,		0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::normal_slot_,		0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"TANGENT",		0, DXGI_FORMAT_R32G32B32A32_FLOAT,	Mesh::tangent_slot_,	0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"TEXCOORD",		0, DXGI_FORMAT_R32G32_FLOAT,		Mesh::texcoord0_slot_,	0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 		};
 
 		// Load the HDR vertex shader.
 		Microsoft::WRL::ComPtr<ID3DBlob> vs;
 		ThrowIfFailed(D3DReadFileToBlob(L"HDR_VS.cso", &vs));
 
-
-		CD3DX12_RASTERIZER_DESC rasterizer_desc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		rasterizer_desc.CullMode = D3D12_CULL_MODE_FRONT;
-		
 		hdr_pipeline_state_stream.PRootSignature		= sponza_root_signature_.GetRootSignature().Get();
 		hdr_pipeline_state_stream.InputLayout			= { &input_layout[0], static_cast<UINT>(input_layout.size()) };
-		hdr_pipeline_state_stream.Rasterizer			= rasterizer_desc;
+		hdr_pipeline_state_stream.Rasterizer			= CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);;
 		hdr_pipeline_state_stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		hdr_pipeline_state_stream.VS					= CD3DX12_SHADER_BYTECODE(vs.Get());
 		hdr_pipeline_state_stream.DSVFormat				= hdr_render_target_.GetDepthStencilFormat();
@@ -184,6 +180,7 @@ void SponzaScene::Load(const std::string& filename)
 void SponzaScene::Update(UpdateEventArgs& e)
 {
 	Scene::Update(e);
+
 }
 
 void SponzaScene::PrepareRender(CommandList& command_list)
@@ -235,8 +232,31 @@ void SponzaScene::Render(CommandList& command_list)
 	for (auto& instance : mesh_instances_)
 	{
 		Mesh& mesh = document_data_.Meshes[instance.MeshIndex];
-		mesh.SetBaseTransform(instance.Transform);
+		mesh.SetBaseTransform(instance.Transform);	
 		mesh.Render(render_context);
+	}
+
+	DirectX::XMMATRIX translation_matrix	= DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX rotation_matrix		= DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX scaling_matrix		= DirectX::XMMatrixIdentity();
+
+	DirectX::XMMATRIX world_matrix			= DirectX::XMMatrixIdentity();
+	
+	// Render geometry for point light sources
+	for(const auto& l : point_lights_)
+	{
+		DirectX::XMVECTOR light_position = DirectX::XMLoadFloat4(&l.PositionWS);
+		DirectX::XMVECTOR light_scaling{ 0.1f, 0.1f, 0.1f };
+
+		translation_matrix	= DirectX::XMMatrixTranslationFromVector(light_position);
+		scaling_matrix		= DirectX::XMMatrixScalingFromVector(light_scaling);
+		
+		world_matrix = scaling_matrix * rotation_matrix * translation_matrix;
+
+		sphere_mesh_->GetMaterials()[0].EmissiveFactor = DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z);
+
+		sphere_mesh_->SetWorldMatrix(world_matrix);
+		sphere_mesh_->Render(render_context);
 	}
 }
 

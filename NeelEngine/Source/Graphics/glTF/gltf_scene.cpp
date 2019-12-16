@@ -8,7 +8,7 @@
 
 Scene::Scene()
 	: name_("Scene")
-	  , animate_lights_(false)
+	  , animate_lights_(true)
 {
 }
 
@@ -33,6 +33,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 		for(int i = 0; i < document.textures.size(); i++)
 		{
 			const fx::gltf::Image& image = document.images[document.textures[i].source];
+			
 			std::string file_name = "";
 			
 			if (!image.uri.empty() && !image.IsEmbeddedResource())
@@ -62,7 +63,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 		// RESTRICTION: only load document.scenes[0] .
 		if (!document.scenes.empty())
 		{
-			const XMMATRIX root_transform = DirectX::XMMatrixMultiply(DirectX::XMMatrixIdentity(), DirectX::XMMatrixScaling(-1, 1, 1));
+			const XMMATRIX root_transform = DirectX::XMMatrixIdentity();
 
 			std::vector<Node> nodes(document.nodes.size());
 
@@ -97,7 +98,36 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 			}
 		}
 	}
+
+	// Load basic geometry for scene (debugging purposes)
+	std::string basic_geometry[3];
+	basic_geometry[0] = "Assets/BasicGeometry/Cube.gltf";
+	basic_geometry[1] = "Assets/BasicGeometry/Sphere.gltf";
+	basic_geometry[2] = "Assets/BasicGeometry/Cone.gltf";
+
+	cube_mesh_		= LoadBasicGeometry(basic_geometry[0], command_list);
+	sphere_mesh_	= LoadBasicGeometry(basic_geometry[1], command_list);
+	cone_mesh_		= LoadBasicGeometry(basic_geometry[2], command_list);	
 }
+
+std::unique_ptr<Mesh> Scene::LoadBasicGeometry(std::string& filepath, CommandList& command_list)
+{
+	// Load glTF 2.0 document.
+	fx::gltf::Document document;
+
+	if (StringEndsWith(filepath, ".gltf"))
+		document = fx::gltf::LoadFromText(filepath);
+	if (StringEndsWith(filepath, ".glb"))
+		document = fx::gltf::LoadFromBinary(filepath);
+
+	Mesh m;
+	m.Load(document, 0, command_list);
+	
+	document_data_.Meshes.push_back(m);
+
+	return std::make_unique<Mesh>(document_data_.Meshes.back());
+}
+
 
 void Scene::Unload()
 {
@@ -119,23 +149,23 @@ void Scene::Update(UpdateEventArgs& e)
 
 	XMMATRIX view_matrix = camera.GetViewMatrix();
 
-	const int num_point_lights = 4;
-	const int num_spot_lights = 4;
-	const int num_directional_lights = 1;
+	const int num_point_lights			= 12;
+	const int num_spot_lights			= 4;
+	const int num_directional_lights	= 1;
 
 	static const XMVECTORF32 light_colors[] =
 	{
-		Colors::White, Colors::Orange, Colors::Yellow, Colors::Green, Colors::Blue, Colors::Indigo, Colors::Violet,
-		Colors::White
+		Colors::Red, Colors::Green, Colors::Blue, Colors::Orange, Colors::DarkTurquoise, Colors::Indigo, Colors::Violet,
+		Colors::Aqua, Colors::CadetBlue, Colors::GreenYellow, Colors::Lime, Colors::Azure
 	};
 
 	static float light_anim_time = 0.0f;
 	if (animate_lights_)
 	{
-		light_anim_time += static_cast<float>(e.ElapsedTime) * 0.5f * XM_PI;
+		light_anim_time += static_cast<float>(e.ElapsedTime) * 0.2f * XM_PI;
 	}
 
-	const float radius = 8.0f;
+	const float radius = 3.5f;
 	const float offset = 2.0f * XM_PI / num_point_lights;
 	const float offset2 = offset + (offset / 2.0f);
 
@@ -147,7 +177,7 @@ void Scene::Update(UpdateEventArgs& e)
 
 		l.PositionWS = {
 			static_cast<float>(std::sin(light_anim_time + offset * i)) * radius,
-			9.0f,
+			2.0f,
 			static_cast<float>(std::cos(light_anim_time + offset * i)) * radius,
 			1.0f
 		};
@@ -191,13 +221,13 @@ void Scene::Update(UpdateEventArgs& e)
 	{
 		DirectionalLight& l = directional_lights_[i];
 
-		XMVECTOR direction_ws = { 0.0, -1.0, 0.0, 0.0 };
+		XMVECTOR direction_ws = { -0.57f, 0.57f, 0.57f, 0.0 };
 		XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
 		
 		XMStoreFloat4(&l.DirectionWS, direction_ws);
 		XMStoreFloat4(&l.DirectionVS, direction_vs);
 
-		l.Color = XMFLOAT4(light_colors[num_point_lights + i]);
+		l.Color = XMFLOAT4(Colors::White);
 	}
 }
 

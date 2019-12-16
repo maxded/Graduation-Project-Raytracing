@@ -285,6 +285,7 @@ void CommandList::SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY primitive_topology
 void CommandList::LoadTextureFromFile(Texture& texture, const std::string& filename, TextureUsage texture_usage)
 {
 	std::filesystem::path file_path(filename);
+	
 	if (!std::filesystem::exists(file_path))
 	{
 		throw std::exception("File not found.");
@@ -324,12 +325,6 @@ void CommandList::LoadTextureFromFile(Texture& texture, const std::string& filen
 			WIC_FLAGS_FORCE_RGB,
 			&metadata,
 			scratch_image));
-	}
-
-	// Force albedo textures to use sRGB
-	if (texture_usage == TextureUsage::kAlbedo)
-	{
-		metadata.format = MakeSRGB(metadata.format);
 	}
 
 	D3D12_RESOURCE_DESC texture_desc = {};
@@ -399,7 +394,7 @@ void CommandList::LoadTextureFromFile(Texture& texture, const std::string& filen
 
 	if (subresources.size() < texture_resource->GetDesc().MipLevels)
 	{
-		//GenerateMips(texture);
+		GenerateMips(texture);
 	}
 }
 

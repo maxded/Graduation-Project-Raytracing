@@ -57,7 +57,12 @@
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
       <AdditionalOptions />
+      <ObjectFileOutput>$(OutDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)Assets"
+xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -75,7 +80,12 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
+      <ObjectFileOutput>$(OutDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
+    <PostBuildEvent>
+      <Command>xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)Assets"
+xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\reflections_demo.h" />

@@ -118,6 +118,10 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
 	std::vector<std::shared_ptr<CommandList>> to_be_queued;
 	to_be_queued.reserve(command_lists.size() * 2); // 2x since each command list will have a pending command list.
 
+	// Generate mips command lists.
+	std::vector<std::shared_ptr<CommandList> > generate_mip_command_lists;
+	generate_mip_command_lists.reserve(command_lists.size());
+	
 	// Command lists that need to be executed.
 	std::vector<ID3D12CommandList*> d3d12_command_lists;
 	d3d12_command_lists.reserve(command_lists.size() * 2); // 2x since each command list will have a pending command list.
@@ -137,6 +141,12 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
 
 		to_be_queued.push_back(pending_command_list);
 		to_be_queued.push_back(command_list);
+
+		auto generate_mip_command_list = command_list->GetGenerateMipsCommandList();
+		if (generate_mip_command_list)
+		{
+			generate_mip_command_lists.push_back(generate_mip_command_list);
+		}
 	}
 
 	UINT num_command_lists = static_cast<UINT>(d3d12_command_lists.size());
@@ -149,6 +159,15 @@ uint64_t CommandQueue::ExecuteCommandLists(const std::vector<std::shared_ptr<Com
 	for (auto command_list : to_be_queued)
 	{
 		in_flight_command_lists_.Push({fence_value, command_list});
+	}
+
+	// If there are any command lists that generate mips then execute those
+	// after the initial resource command lists have finished.
+	if (generate_mip_command_lists.size() > 0)
+	{
+		auto computeQueue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+		computeQueue->Wait(*this);
+		computeQueue->ExecuteCommandLists(generate_mip_command_lists);
 	}
 
 	return fence_value;

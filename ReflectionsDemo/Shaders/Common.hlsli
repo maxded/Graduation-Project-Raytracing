@@ -4,7 +4,7 @@ struct MeshConstantData
 	//----------------------------------- (64 byte boundary)
 	float4x4 ModelViewMatrix;
 	//----------------------------------- (64 byte boundary)
-	float4x4 InverseTransposeModelViewMatrix;
+	float4x4 InverseTransposeModelMatrix;
 	//----------------------------------- (64 byte boundary)
 	float4x4 ModelViewProjectionMatrix;
 	//----------------------------------- (64 byte boundary)
@@ -89,12 +89,7 @@ struct LightProperties
 {
 	uint NumPointLights;
 	uint NumSpotLights;
-};
-
-struct LightResult
-{
-	float4 Diffuse;
-	float4 Specular;
+	uint NumDirectionalLights;
 };
 
 ConstantBuffer<MeshConstantData>		MeshCB				: register(b0);
@@ -105,7 +100,7 @@ StructuredBuffer<PointLight>			PointLights			: register(t1);
 StructuredBuffer<SpotLight>				SpotLights			: register(t2);
 StructuredBuffer<DirectionalLight>		DirectionalLights	: register(t3);
 
-Texture2D Textures[73]				: register(t4);
+Texture2D Textures[69]				: register(t4);
 
 SamplerState LinearRepeatSampler    : register(s0);
 
@@ -129,28 +124,43 @@ float4 SRGBtoLINEAR(float4 srgbColor)
 #endif
 }
 
-float3 Diffuse_Lambert(float3 diffuseColor)
+//---------------------------------------------------------------------//
+
+float DistributionGGX(float3 N, float3 H, float roughness)
 {
-	return diffuseColor / M_PI;
+	float a = roughness * roughness;
+	float a2 = a * a;
+	float NdotH = max(dot(N, H), 0.0);
+	float NdotH2 = NdotH * NdotH;
+
+	float num = a2;
+	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+	denom = M_PI * denom * denom;
+
+	return num / denom;
 }
 
-float3 F_Schlick(float3 r0, float3 f90, float LdH)
+float GeometrySchlickGGX(float NdotV, float roughness)
 {
-	return r0 + (f90 - r0) * pow(clamp(1.0 - LdH, 0.0, 1.0), 5.0);
+	float r = (roughness + 1.0);
+	float k = (r * r) / 8.0;
+
+	float num = NdotV;
+	float denom = NdotV * (1.0 - k) + k;
+
+	return num / denom;
+}
+float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+{
+	float NdotV = max(dot(N, V), 0.0);
+	float NdotL = max(dot(N, L), 0.0);
+	float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+
+	return ggx1 * ggx2;
 }
 
-float G_Smith(float NdL, float NdV, float alphaRoughness)
+float3 fresnelSchlick(float cosTheta, float3 F0)
 {
-	float a2 = alphaRoughness * alphaRoughness;
-
-	float gl = NdL + sqrt(a2 + (1.0 - a2) * (NdL * NdL));
-	float gv = NdV + sqrt(a2 + (1.0 - a2) * (NdV * NdV));
-	return 1.0f / (gl * gv); // The division by (4.0 * NdL * NdV) is unneeded with this form
-}
-
-float D_GGX(float NdH, float alphaRoughness)
-{
-	float a2 = alphaRoughness * alphaRoughness;
-	float f = (NdH * a2 - NdH) * NdH + 1.0;
-	return a2 / (M_PI * f * f);
+	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }

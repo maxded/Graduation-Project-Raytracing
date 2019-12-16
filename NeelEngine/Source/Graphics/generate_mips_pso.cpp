@@ -43,7 +43,7 @@ GenerateMipsPSO::GenerateMipsPSO()
 		root_parameters, 1, &linear_clamp_sampler
 	);
 
-	m_RootSignature.SetRootSignatureDesc(
+	root_signature_.SetRootSignatureDesc(
 		root_signature_desc.Desc_1_1,
 		feature_data.HighestVersion
 	);
@@ -55,17 +55,17 @@ GenerateMipsPSO::GenerateMipsPSO()
 		CD3DX12_PIPELINE_STATE_STREAM_CS CS;
 	} pipeline_state_stream;
 
-	pipeline_state_stream.pRootSignature = m_RootSignature.GetRootSignature().Get();
+	pipeline_state_stream.pRootSignature = root_signature_.GetRootSignature().Get();
 	pipeline_state_stream.CS = CD3DX12_SHADER_BYTECODE(cs.Get());
 
 	D3D12_PIPELINE_STATE_STREAM_DESC pipeline_state_stream_desc = {
 		sizeof(PipelineStateStream), &pipeline_state_stream
 	};
 
-	ThrowIfFailed(device->CreatePipelineState(&pipeline_state_stream_desc, IID_PPV_ARGS(&m_PipelineState)));
+	ThrowIfFailed(device->CreatePipelineState(&pipeline_state_stream_desc, IID_PPV_ARGS(&pipeline_state_)));
 
 	// Create some default texture UAV's to pad any unused UAV's during mip map generation.
-	m_DefaultUAV = NeelEngine::Get().AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4);
+	default_uav_ = NeelEngine::Get().AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4);
 
 	for (UINT i = 0; i < 4; ++i)
 	{
@@ -77,7 +77,7 @@ GenerateMipsPSO::GenerateMipsPSO()
 
 		device->CreateUnorderedAccessView(
 			nullptr, nullptr, &uav_desc,
-			m_DefaultUAV.GetDescriptorHandle(i)
+			default_uav_.GetDescriptorHandle(i)
 		);
 	}
 }

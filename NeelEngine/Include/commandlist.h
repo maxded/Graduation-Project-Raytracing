@@ -379,6 +379,11 @@ public:
 	 */
 	void SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heap_type, ID3D12DescriptorHeap* heap);
 
+	std::shared_ptr<CommandList> GetGenerateMipsCommandList() const
+	{
+		return compute_command_list_;
+	}
+
 protected:
 
 private:

@@ -8,6 +8,7 @@
 Mesh::Mesh()
 	: name_("unavailable")
 	  , base_transform_{XMMatrixIdentity()}
+	  , world_matrix_{ XMMatrixIdentity()}
 {
 }
 
@@ -15,18 +16,18 @@ Mesh::~Mesh()
 {
 }
 
-void Mesh::SetWorldMatrix(const DirectX::XMFLOAT3& translation, const DirectX::XMVECTOR& quaternion, float scale)
+void Mesh::SetWorldMatrix(const DirectX::XMFLOAT3& translation, const float rotation_y, float scale)
 {
 	const XMMATRIX t = XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&translation));
-	const XMMATRIX r = XMMatrixRotationQuaternion(quaternion);
+	const XMMATRIX r = XMMatrixRotationY(rotation_y);
 	const XMMATRIX s = XMMatrixScaling(scale, scale, scale);
-
-	constant_data_.ModelMatrix = base_transform_ * t * r * s;
+	
+	world_matrix_ = t * r * s;
 }
 
 void Mesh::SetWorldMatrix(const DirectX::XMMATRIX& world_matrix)
 {
-	constant_data_.ModelMatrix = base_transform_ * world_matrix;
+	world_matrix_ = world_matrix;
 }
 
 std::vector<ShaderOptions> Mesh::RequiredShaderOptions() const
@@ -181,17 +182,16 @@ void Mesh::Render(RenderContext& render_context)
 {
 	Camera& camera = Camera::Get();
 
+	constant_data_.ModelMatrix				= base_transform_ * world_matrix_;
+	
 	XMMATRIX model_view						= constant_data_.ModelMatrix * camera.GetViewMatrix();
-	XMMATRIX inverse_transpose_model_view	= XMMatrixTranspose(XMMatrixInverse(nullptr, model_view));
+	XMMATRIX inverse_transpose_model		= XMMatrixTranspose(XMMatrixInverse(nullptr, constant_data_.ModelMatrix));
 	XMMATRIX model_view_projection			= constant_data_.ModelMatrix * camera.GetViewMatrix() * camera.GetProjectionMatrix();
 
-	constant_data_.ModelViewMatrix = model_view;
-	constant_data_.InverseTransposeModelViewMatrix = inverse_transpose_model_view;
-	constant_data_.ModelViewProjectionMatrix = model_view_projection;
-	
-	constant_data_.ModelMatrix = XMMatrixTranspose(constant_data_.ModelMatrix);
-	constant_data_.ModelViewProjectionMatrix = XMMatrixTranspose(constant_data_.ModelViewProjectionMatrix);
-	constant_data_.CameraPosition = camera.GetTranslation();
+	constant_data_.ModelViewMatrix				= model_view;
+	constant_data_.InverseTransposeModelMatrix	= inverse_transpose_model;
+	constant_data_.ModelViewProjectionMatrix	= model_view_projection;
+	constant_data_.CameraPosition				= camera.GetTranslation();
 
 	render_context.CommandList.SetGraphicsDynamicStructuredBuffer(2, materials_);
 
@@ -229,7 +229,6 @@ void Mesh::Render(RenderContext& render_context)
 void Mesh::SetBaseTransform(const DirectX::XMMATRIX& base_transform)
 {
 	base_transform_ = base_transform;
-	constant_data_.ModelMatrix = base_transform_;
 }
 
 void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)
@@ -240,7 +239,7 @@ void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)
 
 		Material.BaseColorIndex = m.pbrMetallicRoughness.baseColorTexture.index;
 		Material.BaseColorFactor = XMFLOAT4(m.pbrMetallicRoughness.baseColorFactor.data());
-
+		
 		Material.MetalRoughIndex = m.pbrMetallicRoughness.metallicRoughnessTexture.index;
 		Material.MetallicFactor = m.pbrMetallicRoughness.metallicFactor;
 		Material.RoughnessFactor = m.pbrMetallicRoughness.roughnessFactor;
