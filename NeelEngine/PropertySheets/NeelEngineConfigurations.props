@@ -18,6 +18,7 @@
       $(ProjectDir)Include/Utility;
       $(ProjectDir)Include/External;
       $(ProjectDir)Include/SceneRendering;
+      $(ProjectDir)Include/ImGui;
       $(SolutionDir)DirectXTex/DirectXTex;
       (AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>

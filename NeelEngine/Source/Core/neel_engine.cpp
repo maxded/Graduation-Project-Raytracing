@@ -16,6 +16,7 @@ static WindowPtr p_window = nullptr;
 uint64_t NeelEngine::frame_count_ = 0;
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param);
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // A wrapper struct to allow shared pointers for the window class.
 // This is needed because the constructor and destructor for the Window
@@ -66,9 +67,9 @@ void NeelEngine::Initialize()
 	// Always enable the debug layer before doing anything DX12 related
 	// so all possible errors generated while creating DX12 objects
 	// are caught by the debug layer.
-	ComPtr<ID3D12Debug1> debugInterface;
-	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
-	debugInterface->EnableDebugLayer();
+	ComPtr<ID3D12Debug1> debug_interface;
+	ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debug_interface)));
+	debug_interface->EnableDebugLayer();
 	// Enable these if you want full validation (will slow down rendering a lot).
 	//debugInterface->SetEnableGPUBasedValidation(TRUE);
 	//debugInterface->SetEnableSynchronizedCommandQueueValidation(TRUE);
@@ -135,12 +136,12 @@ void NeelEngine::Destroy()
 Microsoft::WRL::ComPtr<IDXGIAdapter4> NeelEngine::GetAdapter(bool b_use_warp) const
 {
 	Microsoft::WRL::ComPtr<IDXGIFactory4> dxgi_factory;
-	UINT createFactoryFlags = 0;
+	UINT create_factory_flags = 0;
 #if defined(_DEBUG)
-	createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+	create_factory_flags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
-	ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgi_factory)));
+	ThrowIfFailed(CreateDXGIFactory2(create_factory_flags, IID_PPV_ARGS(&dxgi_factory)));
 
 	Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgi_adapter1;
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> dxgi_adapter4;
@@ -155,18 +156,18 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> NeelEngine::GetAdapter(bool b_use_warp) co
 		SIZE_T max_dedicated_video_memory = 0;
 		for (UINT i = 0; dxgi_factory->EnumAdapters1(i, &dxgi_adapter1) != DXGI_ERROR_NOT_FOUND; ++i)
 		{
-			DXGI_ADAPTER_DESC1 dxgiAdapterDesc1;
-			dxgi_adapter1->GetDesc1(&dxgiAdapterDesc1);
+			DXGI_ADAPTER_DESC1 dxgi_adapter_desc1;
+			dxgi_adapter1->GetDesc1(&dxgi_adapter_desc1);
 
 			// Check to see if the adapter can create a D3D12 device without actually 
 			// creating it. The adapter with the largest dedicated video memory
 			// is favored.
-			if ((dxgiAdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
+			if ((dxgi_adapter_desc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
 				SUCCEEDED(D3D12CreateDevice(dxgi_adapter1.Get(),
 					D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)) &&
-				dxgiAdapterDesc1.DedicatedVideoMemory > max_dedicated_video_memory)
+				dxgi_adapter_desc1.DedicatedVideoMemory > max_dedicated_video_memory)
 			{
-				max_dedicated_video_memory = dxgiAdapterDesc1.DedicatedVideoMemory;
+				max_dedicated_video_memory = dxgi_adapter_desc1.DedicatedVideoMemory;
 				ThrowIfFailed(dxgi_adapter1.As(&dxgi_adapter4));
 			}
 		}
@@ -305,6 +306,7 @@ std::shared_ptr<Window> NeelEngine::CreateRenderWindow(const std::wstring& windo
 
 	WindowPtr window = std::make_shared<MakeWindow>(h_wnd, window_name, client_width, client_height, v_sync);
 	p_window = window;
+	p_window->Initialize();
 
 	return p_window;
 }
@@ -454,6 +456,12 @@ MouseButtonEventArgs::MouseButton DecodeMouseButton(UINT message_id)
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM l_param)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hwnd, message, w_param, l_param))
+	{
+		return true;
+	}
+
+	
 	if (p_window)
 	{
 		switch (message)
@@ -483,6 +491,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM w_param, LPARAM 
 					{
 						GetMessage(&char_msg, hwnd, 0, 0);
 						c = static_cast<unsigned int>(char_msg.wParam);
+
+						if(char_msg.wParam > 0 && char_msg.wParam < 0x10000)
+							ImGui::GetIO().AddInputCharacter((unsigned short)char_msg.wParam);
 					}
 					bool shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
 					bool control = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;

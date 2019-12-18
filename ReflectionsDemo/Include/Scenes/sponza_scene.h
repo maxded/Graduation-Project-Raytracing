@@ -20,6 +20,8 @@ public:
 
 	RenderTarget& GetRenderTarget() override;
 
+	void OnGui();
+
 protected:
 
 private:

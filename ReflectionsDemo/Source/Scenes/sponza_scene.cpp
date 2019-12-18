@@ -258,9 +258,21 @@ void SponzaScene::Render(CommandList& command_list)
 		sphere_mesh_->SetWorldMatrix(world_matrix);
 		sphere_mesh_->Render(render_context);
 	}
+
+	// Render GUI.
+	OnGui();
 }
 
 RenderTarget& SponzaScene::GetRenderTarget() 
 {
 	return hdr_render_target_;
+}
+
+void SponzaScene::OnGui()
+{
+	static bool show = true;
+
+	
+	ImGui::ShowDemoWindow(&show);
+
 }

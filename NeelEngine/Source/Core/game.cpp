@@ -84,8 +84,10 @@ void Game::OnKeyPressed(KeyEventArgs& e)
 {
 	Camera& camera = Camera::Get();
 
-	switch (e.Key)
+	if (!ImGui::GetIO().WantCaptureKeyboard)
 	{
+		switch (e.Key)
+		{
 		case KeyCode::W:
 			forward_ = 1.0f;
 			break;
@@ -104,14 +106,17 @@ void Game::OnKeyPressed(KeyEventArgs& e)
 		case KeyCode::E:
 			up_ = 1.0f;
 			break;
-		default: ;
+		default:;
+		}
 	}
 }
 
 void Game::OnKeyReleased(KeyEventArgs& e)
 {
-	switch (e.Key)
+	if (!ImGui::GetIO().WantCaptureKeyboard)
 	{
+		switch (e.Key)
+		{
 		case KeyCode::Up:
 		case KeyCode::W:
 			forward_ = 0.0f;
@@ -136,6 +141,7 @@ void Game::OnKeyReleased(KeyEventArgs& e)
 			break;
 		default:
 			break;
+		}
 	}
 }
 
@@ -143,13 +149,16 @@ void Game::OnMouseMoved(MouseMotionEventArgs& e)
 {
 	const float mouse_speed = 0.2f;
 
-	if (e.RightButton)
+	if (!ImGui::GetIO().WantCaptureMouse)
 	{
-		pitch_ += e.RelY * mouse_speed;
+		if (e.RightButton)
+		{
+			pitch_ += e.RelY * mouse_speed;
 
-		pitch_ = clamp(pitch_, -90.0f, 90.0f);
+			pitch_ = clamp(pitch_, -90.0f, 90.0f);
 
-		yaw_ += e.RelX * mouse_speed;
+			yaw_ += e.RelX * mouse_speed;
+		}
 	}
 }
 
@@ -165,14 +174,17 @@ void Game::OnMouseButtonReleased(MouseButtonEventArgs& e)
 
 void Game::OnMouseWheel(MouseWheelEventArgs& e)
 {
-	Camera& camera = Camera::Get();
+	if (!ImGui::GetIO().WantCaptureMouse)
+	{
+		Camera& camera = Camera::Get();
 
-	auto fov = camera.GetFoV();
+		auto fov = camera.GetFoV();
 
-	fov -= e.WheelDelta;
-	fov = clamp(fov, 12.0f, 90.0f);
+		fov -= e.WheelDelta;
+		fov = clamp(fov, 12.0f, 90.0f);
 
-	camera.SetFoV(fov);
+		camera.SetFoV(fov);
+	}
 }
 
 void Game::OnResize(ResizeEventArgs& e)

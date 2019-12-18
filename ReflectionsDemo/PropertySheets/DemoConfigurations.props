@@ -19,6 +19,7 @@
       $(SolutionDir)NeelEngine/Include/Graphics/ResourceManagement;
       $(SolutionDir)NeelEngine/Include/Graphics/glTF;
       $(SolutionDir)NeelEngine/Include/SceneRendering;
+      $(SolutionDir)NeelEngine/Include/ImGui;
       %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_ENABLE_EXTENDED_ALIGNED_STORAGE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

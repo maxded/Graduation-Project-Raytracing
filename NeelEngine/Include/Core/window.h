@@ -9,6 +9,7 @@
 #include "events.h"
 #include "high_resolution_clock.h"
 #include "render_target.h"
+#include "GUI.h"
 
 #include <string>
 #include <memory>
@@ -26,6 +27,16 @@ public:
 	* @returns The handle to the window instance or nullptr if this is not a valid window.
 	*/
 	HWND GetWindowHandle() const;
+
+	/**
+	 * Get the current DPI scaling for this window.
+	 */
+	float GetDPIScaling() const;
+
+	/**
+	* Initialize the window.
+	*/
+	void Initialize();
 
 	/**
 	* Destroy this window.
@@ -144,6 +155,8 @@ private:
 	std::weak_ptr<Game> p_game_;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> dxgi_swap_chain_;
+	HANDLE swap_chain_event_;
+	
 	Texture back_buffer_textures_[buffer_count_];
 	// Marked mutable to allow modification in a const function.
 	mutable RenderTarget render_target_;
@@ -152,4 +165,8 @@ private:
 
 	RECT window_rect_{};
 	bool is_tearing_supported_;
+
+	GUI gui_;
+
+	float dpi_scaling_;
 };

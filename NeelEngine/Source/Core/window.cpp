@@ -19,6 +19,8 @@ Window::Window(HWND h_wnd, const std::wstring& window_name, uint16_t client_widt
 	  , fence_values_{0}
 	  , frame_values_{0}
 {
+	dpi_scaling_ = GetDpiForWindow(h_wnd) / 96.0f;
+	
 	NeelEngine& app = NeelEngine::Get();
 
 	is_tearing_supported_ = app.IsTearingSupported();
@@ -42,6 +44,16 @@ HWND Window::GetWindowHandle() const
 	return h_wnd_;
 }
 
+float Window::GetDPIScaling() const
+{
+	return dpi_scaling_;
+}
+
+void Window::Initialize()
+{
+	gui_.Initialize(shared_from_this());
+}
+
 const std::wstring& Window::GetWindowName() const
 {
 	return window_name_;
@@ -62,6 +74,8 @@ void Window::Hide() const
 
 void Window::Destroy()
 {
+	gui_.Destroy();
+	
 	if (auto p_game = p_game_.lock())
 	{
 		// Notify the registered game that the window is being destroyed.
@@ -174,6 +188,11 @@ void Window::RegisterCallbacks(std::shared_ptr<Game> p_game)
 
 void Window::OnUpdate(UpdateEventArgs& e)
 {
+	// Wait for the swapchain to finish presenting
+	::WaitForSingleObjectEx(swap_chain_event_, 100, TRUE);
+
+	gui_.NewFrame();
+	
 	update_clock_.Tick();
 
 	if (auto p_game = p_game_.lock())
@@ -317,6 +336,7 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> Window::CreateSwapChain()
 	swap_chain_desc.SwapEffect	= DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swap_chain_desc.AlphaMode	= DXGI_ALPHA_MODE_UNSPECIFIED;
 	swap_chain_desc.Flags		= is_tearing_supported_ ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+	swap_chain_desc.Flags		|= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
 	ID3D12CommandQueue* p_command_queue = app.GetCommandQueue()->GetD3D12CommandQueue().Get();
 
@@ -336,6 +356,8 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> Window::CreateSwapChain()
 	ThrowIfFailed(swap_chain1.As(&dxgi_swap_chain4));
 
 	current_back_buffer_index_ = dxgi_swap_chain4->GetCurrentBackBufferIndex();
+	dxgi_swap_chain4->SetMaximumFrameLatency(buffer_count_ - 1);
+	swap_chain_event_ = dxgi_swap_chain4->GetFrameLatencyWaitableObject();
 
 	return dxgi_swap_chain4;
 }
@@ -378,6 +400,11 @@ UINT Window::Present(const Texture& texture)
 			command_list->CopyResource(back_buffer, texture);
 		}
 	}
+
+	RenderTarget render_target;
+	render_target.AttachTexture(AttachmentPoint::kColor0, back_buffer);
+
+	gui_.Render(command_list, render_target);
 
 	command_list->TransitionBarrier(back_buffer, D3D12_RESOURCE_STATE_PRESENT);
 	command_queue->ExecuteCommandList(command_list);
