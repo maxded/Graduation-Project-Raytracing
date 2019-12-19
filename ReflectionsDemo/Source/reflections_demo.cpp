@@ -264,7 +264,7 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 		{
 			current_scene_->Unload();
 			current_scene_ = std::make_unique<DefaultScene>();
-			current_scene_->Load("Assets/SciFiHelmet/Sponza.gltf");
+			current_scene_->Load("Assets/SciFiHelmet/SciFiHelmet.gltf");
 			break;
 		}
 		default:

@@ -25,14 +25,14 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 	if (StringEndsWith(filename, ".glb"))
 		document = fx::gltf::LoadFromBinary(filename);
 
+	std::vector<Material> materials(document.materials.size());
+	
 	// Generate material data for current document.
 	{
-		document_data_.Materials.resize(document.materials.size());
-
 		for(int i = 0; i < document.materials.size(); i++)
 		{
 			const fx::gltf::Material& material = document.materials[i];
-			document_data_.Materials[i].Load(document, i, command_list, filename);
+			materials[i].Load(document, i, command_list, filename);
 		}
 	}
 	
@@ -42,7 +42,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 
 		for (int i = 0; i < document.meshes.size(); i++)
 		{
-			document_data_.Meshes[i].Load(document, i, &document_data_.Materials, command_list);
+			document_data_.Meshes[i].Load(document, i,command_list, &materials);
 		}
 	}
 
@@ -109,13 +109,12 @@ std::unique_ptr<Mesh> Scene::LoadBasicGeometry(std::string& filepath, CommandLis
 		document = fx::gltf::LoadFromBinary(filepath);
 
 	Mesh m;
-	m.Load(document, 0, &document_data_.Materials, command_list);
+	m.Load(document, 0, command_list);
 	
 	document_data_.Meshes.push_back(m);
 
 	return std::make_unique<Mesh>(document_data_.Meshes.back());
 }
-
 
 void Scene::Unload()
 {

@@ -55,7 +55,7 @@ void Mesh::SetEmissive(DirectX::XMFLOAT3 color)
 	}
 }
 
-void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, std::vector<Material>* scene_materials, CommandList& command_list)
+void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list, std::vector<Material>* scene_materials)
 {
 	auto device = NeelEngine::Get().GetDevice();
 
@@ -174,7 +174,8 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, std::vect
 		// Set material for this sub mesh.
 		if(mesh.Material() >= 0)
 		{
-			submesh.Material = scene_materials->at(mesh.Material());
+			if (scene_materials)
+				submesh.Material = scene_materials->at(mesh.Material());
 		}
 		
 		if(t_buffer.HasData())

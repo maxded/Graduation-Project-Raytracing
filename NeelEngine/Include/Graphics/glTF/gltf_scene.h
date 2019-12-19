@@ -76,7 +76,6 @@ protected:
 		}
 
 		std::vector<Mesh>		Meshes;
-		std::vector<Material>	Materials;
 	};
 
 	DocumentData	document_data_;

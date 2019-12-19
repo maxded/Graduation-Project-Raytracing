@@ -34,7 +34,7 @@ public:
 	void SetEmissive(DirectX::XMFLOAT3 color);
 
 protected:
-	void Load(const fx::gltf::Document& doc, std::size_t mesh_index, std::vector<Material>* scene_materials, CommandList& command_list);
+	void Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list, std::vector<Material>* scene_materials = nullptr);
 
 	void Unload();
 private:

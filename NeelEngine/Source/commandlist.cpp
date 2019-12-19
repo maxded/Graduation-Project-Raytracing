@@ -16,9 +16,6 @@
 
 #include "DirectXTex.h"
 
-std::map<std::wstring, ID3D12Resource* > CommandList::texture_cache_;
-std::mutex CommandList::ms_texture_cache_mutex_;
-
 CommandList::CommandList(D3D12_COMMAND_LIST_TYPE type)
 	: d3d12_command_list_type_(type)
 {
@@ -296,17 +293,6 @@ void CommandList::LoadTextureFromFile(Texture& texture, const std::string& filen
 
 	const std::wstring wfilename = utf8_to_utf16(filename);
 
-	std::lock_guard<std::mutex> lock(ms_texture_cache_mutex_);
-	auto iter = texture_cache_.find(wfilename);
-	if (iter != texture_cache_.end())
-	{
-		texture.SetTextureUsage(texture_usage);
-		texture.SetD3D12Resource(iter->second);
-		texture.CreateViews();
-		texture.SetName(filename);
-	}
-	else
-	{
 		TexMetadata metadata;
 		ScratchImage scratch_image;
 
@@ -416,10 +402,6 @@ void CommandList::LoadTextureFromFile(Texture& texture, const std::string& filen
 		{
 			GenerateMips(texture);
 		}
-
-		// Add the texture resource to the texture cache.
-		texture_cache_[wfilename] = texture_resource.Get();
-	}
 }
 
 void CommandList::ClearTexture(const Texture& texture, const float clear_color[4])

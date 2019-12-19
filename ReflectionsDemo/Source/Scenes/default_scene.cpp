@@ -82,15 +82,15 @@ void DefaultScene::Load(const std::string& filename)
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 4);
+		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 3);
 
 		CD3DX12_ROOT_PARAMETER1 root_parameters[RootParameters::NumRootParameters];
-		root_parameters[RootParameters::MeshConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-		root_parameters[RootParameters::LightPropertiesCb].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::Materials].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::PointLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::SpotLights].InitAsShaderResourceView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::DirectionalLights].InitAsShaderResourceView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::Materials].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::MeshConstantBuffer].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		root_parameters[RootParameters::LightPropertiesCb].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 2, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::PointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::SpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::DirectionalLights].InitAsShaderResourceView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
 		root_parameters[RootParameters::Textures].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		CD3DX12_STATIC_SAMPLER_DESC static_sampler
@@ -224,6 +224,29 @@ void DefaultScene::Render(CommandList& command_list)
 		Mesh& mesh = document_data_.Meshes[instance.MeshIndex];
 		mesh.SetBaseTransform(instance.Transform);
 		mesh.Render(render_context);
+	}
+
+	DirectX::XMMATRIX translation_matrix = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX rotation_matrix = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX scaling_matrix = DirectX::XMMatrixIdentity();
+
+	DirectX::XMMATRIX world_matrix = DirectX::XMMatrixIdentity();
+
+	// Render geometry for point light sources
+	for (const auto& l : point_lights_)
+	{
+		DirectX::XMVECTOR light_position = DirectX::XMLoadFloat4(&l.PositionWS);
+		DirectX::XMVECTOR light_scaling{ 0.1f, 0.1f, 0.1f };
+
+		translation_matrix = DirectX::XMMatrixTranslationFromVector(light_position);
+		scaling_matrix = DirectX::XMMatrixScalingFromVector(light_scaling);
+
+		world_matrix = scaling_matrix * rotation_matrix * translation_matrix;
+
+		sphere_mesh_->SetEmissive(DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z));
+
+		sphere_mesh_->SetWorldMatrix(world_matrix);
+		sphere_mesh_->Render(render_context);
 	}
 }
 
