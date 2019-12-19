@@ -16,6 +16,11 @@ Mesh::~Mesh()
 {
 }
 
+void Mesh::SetBaseTransform(const DirectX::XMMATRIX& base_transform)
+{
+	base_transform_ = base_transform;
+}
+
 void Mesh::SetWorldMatrix(const DirectX::XMFLOAT3& translation, const float rotation_y, float scale)
 {
 	const XMMATRIX t = XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&translation));
@@ -36,13 +41,21 @@ std::vector<ShaderOptions> Mesh::RequiredShaderOptions() const
 
 	for (const auto& submesh : sub_meshes_)
 	{
-		required_shader_options.push_back(submesh.ShaderConfigurations);
+		required_shader_options.push_back(submesh.Material.GetShaderOptions());
 	}
 
 	return required_shader_options;
 }
 
-void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list)
+void Mesh::SetEmissive(DirectX::XMFLOAT3 color)
+{
+	for(auto& submesh : sub_meshes_)
+	{
+		submesh.Material.SetEmissive(color);
+	}
+}
+
+void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, std::vector<Material>* scene_materials, CommandList& command_list)
 {
 	auto device = NeelEngine::Get().GetDevice();
 
@@ -158,13 +171,15 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 
 		delete[] p_buffer;
 
-		// Set material properties for this sub mesh
-		submesh.SetMaterial(mesh.Material());
-		materials_.push_back(submesh.Material);
-
+		// Set material for this sub mesh.
+		if(mesh.Material() >= 0)
+		{
+			submesh.Material = scene_materials->at(mesh.Material());
+		}
+		
 		if(t_buffer.HasData())
 		{
-			submesh.ShaderConfigurations |= ShaderOptions::HAS_TANGENTS;
+			submesh.Material.HasTangents();
 		}
 	}
 }
@@ -193,22 +208,28 @@ void Mesh::Render(RenderContext& render_context)
 	constant_data_.ModelViewProjectionMatrix	= model_view_projection;
 	constant_data_.CameraPosition				= camera.GetTranslation();
 
-	render_context.CommandList.SetGraphicsDynamicStructuredBuffer(2, materials_);
+	// Bind mesh constant data
+	render_context.CommandList.SetGraphicsDynamicConstantBuffer(1, constant_data_);
 
-	int material_index = 0;
 	for (auto& submesh : sub_meshes_)
 	{
-		const ShaderOptions options = (render_context.OverrideOptions == ShaderOptions::None ? submesh.ShaderConfigurations : render_context.OverrideOptions);
+		const ShaderOptions options = (render_context.OverrideOptions == ShaderOptions::None ? submesh.Material.GetShaderOptions() : render_context.OverrideOptions);
 		if (options != render_context.CurrentOptions)
 		{
 			render_context.CommandList.SetPipelineState(render_context.PipelineStateMap[options]);
 			render_context.CurrentOptions = options;
 		}
 
-		constant_data_.MaterialIndex = material_index;
-		
-		render_context.CommandList.SetGraphicsDynamicConstantBuffer(0, constant_data_);
-		
+		// Bind submesh material data
+		render_context.CommandList.SetGraphicsDynamicConstantBuffer(0, submesh.Material.GetMaterialData());
+
+		// Bind PBR textures to pipeline for this submesh.
+		render_context.CommandList.SetShaderResourceView(6, 0, submesh.Material.Albedo(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(6, 1, submesh.Material.Normal(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(6, 2, submesh.Material.MetalRoughness(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(6, 3, submesh.Material.AmbientOcclusion(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(6, 4, submesh.Material.Emissive(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			
 		render_context.CommandList.SetPrimitiveTopology(submesh.Topology);
 		render_context.CommandList.SetVertexBuffer(0, submesh.VBuffer);
 
@@ -221,66 +242,8 @@ void Mesh::Render(RenderContext& render_context)
 		{
 			render_context.CommandList.Draw(submesh.VBuffer.GetNumVertices(), 1, 0, 0);
 		}
-
-		material_index++;
 	}
 }
 
-void Mesh::SetBaseTransform(const DirectX::XMMATRIX& base_transform)
-{
-	base_transform_ = base_transform;
-}
 
-void Mesh::SubMesh::SetMaterial(const MaterialData& material_data)
-{
-	if (material_data.HasData())
-	{	
-		auto& m = material_data.Data();
 
-		Material.BaseColorIndex = m.pbrMetallicRoughness.baseColorTexture.index;
-		Material.BaseColorFactor = XMFLOAT4(m.pbrMetallicRoughness.baseColorFactor.data());
-		
-		Material.MetalRoughIndex = m.pbrMetallicRoughness.metallicRoughnessTexture.index;
-		Material.MetallicFactor = m.pbrMetallicRoughness.metallicFactor;
-		Material.RoughnessFactor = m.pbrMetallicRoughness.roughnessFactor;
-
-		Material.NormalIndex = m.normalTexture.index;
-		Material.NormalScale = m.normalTexture.scale;
-
-		Material.AoIndex = m.occlusionTexture.index;
-		Material.AoStrength = m.occlusionTexture.strength;
-
-		Material.EmissiveIndex = m.emissiveTexture.index;
-		Material.EmissiveFactor = XMFLOAT3(m.emissiveFactor.data());
-
-		ShaderOptions options = ShaderOptions::None;
-
-		if (Material.BaseColorIndex >= 0)
-			options |= ShaderOptions::HAS_BASECOLORMAP;
-		if (Material.NormalIndex >= 0)
-			options |= ShaderOptions::HAS_NORMALMAP;
-		if (Material.MetalRoughIndex >= 0)
-			options |= ShaderOptions::HAS_METALROUGHNESSMAP;
-		if (Material.AoIndex >= 0)
-		{
-			options |= ShaderOptions::HAS_OCCLUSIONMAP;
-
-			if (Material.AoIndex == Material.MetalRoughIndex)
-			{
-				options |= ShaderOptions::HAS_OCCLUSIONMAP_COMBINED;
-			}
-		}
-		if (Material.EmissiveIndex >= 0)
-			options |= ShaderOptions::HAS_EMISSIVEMAP;
-
-		ShaderConfigurations = options;
-	}
-	else
-	{
-		// Use a default material
-		ShaderConfigurations = ShaderOptions::None;
-		Material.BaseColorFactor = DirectX::XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
-		Material.MetallicFactor = 0;
-		Material.RoughnessFactor = 0.5f;
-	}
-}

@@ -12,29 +12,28 @@ struct PixelShaderInput
 
 float4 main(PixelShaderInput IN) : SV_Target
 {
-	MaterialData material = Materials[MeshCB.MaterialIndex];
 	IN.NormalW	= normalize(IN.NormalW);
-
 	float4 final_color;
 
 #if USE_AUTO_COLOR
-	final_color = material.MeshAutoColor;
+	final_color = Material.MeshAutoColor;
 	return final_color;
 #else
 
 #if HAS_BASECOLORMAP
-	float4 base_color = Textures[material.BaseColorIndex].Sample(LinearRepeatSampler, IN.TexCoord) * material.BaseColorFactor;
+	float4 base_color = Textures[0].Sample(LinearRepeatSampler, IN.TexCoord) * Material.BaseColorFactor;
 #else
-	float4 base_color = material.BaseColorFactor;
+	float4 base_color = Material.BaseColorFactor;
 #endif
 
 #if HAS_METALROUGHNESSMAP
-	float4 metal_rough_sample		= Textures[material.MetalRoughIndex].Sample(LinearRepeatSampler, IN.TexCoord);
-	float perceptual_roughness		= metal_rough_sample.g * material.RoughnessFactor;
-	float metallic					= metal_rough_sample.b * material.MetallicFactor;
+	float4 metal_rough_sample		= Textures[2].Sample(LinearRepeatSampler, IN.TexCoord);
+
+	float perceptual_roughness		= metal_rough_sample.g * Material.RoughnessFactor;
+	float metallic					= metal_rough_sample.b * Material.MetallicFactor;
 #else
-	float perceptual_roughness		= material.RoughnessFactor;
-	float metallic					= material.MetallicFactor;
+	float perceptual_roughness		= Material.RoughnessFactor;
+	float metallic					= Material.MetallicFactor;
 #endif
 
 	perceptual_roughness	= clamp(perceptual_roughness, 0.04, 1.0);
@@ -62,10 +61,10 @@ float4 main(PixelShaderInput IN) : SV_Target
 #endif
 
 #if HAS_NORMALMAP
-	float4 normal_map_sample = Textures[material.NormalIndex].Sample(LinearRepeatSampler, IN.TexCoord);
+	float4 normal_map_sample = Textures[1].Sample(LinearRepeatSampler, IN.TexCoord);
 	normal_map_sample.g = 1.0 - normal_map_sample.g;
 
-	float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * float3(material.NormalScale, material.NormalScale, 1.0);
+	float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * float3(Material.NormalScale, Material.NormalScale, 1.0);
 	float3 N = normalize(mul(normal, TBN));
 #else
 	float3 N = TBN[2].xyz;
@@ -135,16 +134,16 @@ float4 main(PixelShaderInput IN) : SV_Target
 #if HAS_OCCLUSIONMAP_COMBINED
 	float ao = metalRoughSample.r;
 #else
-	float ao = Textures[material.AoIndex].Sample(LinearRepeatSampler, IN.TexCoord);
+	float ao = Textures[3].Sample(LinearRepeatSampler, IN.TexCoord);
 #endif
-	color = lerp(color, color * ao, material.AoStrength);
+	color = lerp(color, color * ao, Material.AoStrength);
 #endif
 
 #if HAS_EMISSIVEMAP
-	float3 emissive = Textures[material.EmissiveIndex].Sample(LinearRepeatSampler, IN.TexCoord).rgb * material.EmissiveFactor;
+	float3 emissive = Textures[4].Sample(LinearRepeatSampler, IN.TexCoord).rgb * Material.EmissiveFactor;
 	color += emissive;
 #else
-	color += material.EmissiveFactor;
+	color += Material.EmissiveFactor;
 #endif
 
 	final_color = float4(color, base_color.a);

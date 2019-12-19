@@ -6,7 +6,7 @@
 #include "mesh_instance.h"
 #include "shader_data.h"
 #include "events.h"
-#include "texture.h"
+#include "material.h"
 
 class Scene
 {
@@ -75,8 +75,8 @@ protected:
 		{
 		}
 
-		std::vector<Mesh>	 Meshes;
-		std::vector<Texture> Textures;
+		std::vector<Mesh>		Meshes;
+		std::vector<Material>	Materials;
 	};
 
 	DocumentData	document_data_;

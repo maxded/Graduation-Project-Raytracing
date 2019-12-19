@@ -8,13 +8,9 @@ struct MeshConstantData
 	//----------------------------------- (64 byte boundary)
 	float4x4 ModelViewProjectionMatrix;
 	//----------------------------------- (64 byte boundary)
-
-	int MaterialIndex;
-	float3 Padding;
-	//----------------------------------- (16 byte boundary)
 	float4 CameraPosition;
 	//----------------------------------- (16 byte boundary)
-	// Total:                              64 * 3 + 16 = 224 bytes
+	// Total:                              64 * 4 + 16 = 272 bytes
 };
 
 struct MaterialData
@@ -23,20 +19,15 @@ struct MaterialData
 	//----------------------------------- (16 byte boundary)
 	float4 BaseColorFactor;
 	//----------------------------------- (16 byte boundary)
-	int BaseColorIndex;
-	int NormalIndex;
 	float NormalScale;
-	int MetalRoughIndex;
-	//----------------------------------- (16 byte boundary)
 	float RoughnessFactor;
 	float MetallicFactor;
-	int AoIndex;
 	float AoStrength;
 	//----------------------------------- (16 byte boundary)
-	int EmissiveIndex;
 	float3 EmissiveFactor;
+	float  Padding;
 	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 5 = 80 bytes 
+	// Total:                              16 * 4 = 64 bytes 
 };
 
 struct PointLight
@@ -92,15 +83,15 @@ struct LightProperties
 	uint NumDirectionalLights;
 };
 
-ConstantBuffer<MeshConstantData>		MeshCB				: register(b0);
-ConstantBuffer<LightProperties>			LightPropertiesCB	: register(b1);
+ConstantBuffer<MaterialData>			Material			: register(b0);
+ConstantBuffer<MeshConstantData>		MeshCB				: register(b1);
+ConstantBuffer<LightProperties>			LightPropertiesCB	: register(b2);
 
-StructuredBuffer<MaterialData>			Materials			: register(t0);
-StructuredBuffer<PointLight>			PointLights			: register(t1);
-StructuredBuffer<SpotLight>				SpotLights			: register(t2);
-StructuredBuffer<DirectionalLight>		DirectionalLights	: register(t3);
+StructuredBuffer<PointLight>			PointLights			: register(t0);
+StructuredBuffer<SpotLight>				SpotLights			: register(t1);
+StructuredBuffer<DirectionalLight>		DirectionalLights	: register(t2);
 
-Texture2D Textures[69]				: register(t4);
+Texture2D Textures[5]				: register(t3);
 
 SamplerState LinearRepeatSampler    : register(s0);
 

@@ -60,9 +60,13 @@
       <ObjectFileOutput>$(OutDir)%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)Assets"
-xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>xcopy /y /i /e "$(ProjectDir)Assets" "$(OutDir)Assets"
+xcopy /y /i /e "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -89,14 +93,12 @@ xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\reflections_demo.h" />
-    <ClInclude Include="Include\material.h" />
     <ClInclude Include="Include\Scenes\default_scene.h" />
     <ClInclude Include="Include\Scenes\sponza_scene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\reflections_demo.cpp" />
     <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\MaterialFake.cpp" />
     <ClCompile Include="Source\Scenes\default_scene.cpp" />
     <ClCompile Include="Source\Scenes\sponza_scene.cpp" />
   </ItemGroup>

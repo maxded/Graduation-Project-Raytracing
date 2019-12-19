@@ -2,7 +2,6 @@
 
 #include "gltf_scene.h"
 #include "camera.h"
-#include "gltf_texture_data.h"
 
 #include <DirectXColors.h>
 
@@ -26,26 +25,15 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 	if (StringEndsWith(filename, ".glb"))
 		document = fx::gltf::LoadFromBinary(filename);
 
-	// Generate texture data for current document.
+	// Generate material data for current document.
 	{
-		document_data_.Textures.resize(document.textures.size());
+		document_data_.Materials.resize(document.materials.size());
 
-		for(int i = 0; i < document.textures.size(); i++)
+		for(int i = 0; i < document.materials.size(); i++)
 		{
-			const fx::gltf::Image& image = document.images[document.textures[i].source];
-			
-			std::string file_name = "";
-			
-			if (!image.uri.empty() && !image.IsEmbeddedResource())
-			{
-				file_name = fx::gltf::detail::GetDocumentRootPath(filename) + "/" + image.uri;
-				command_list.LoadTextureFromFile(document_data_.Textures[i], file_name);
-			}
-			else
-			{
-				throw std::exception("Embedded glTF textures not supported!");
-			}		
-		}	
+			const fx::gltf::Material& material = document.materials[i];
+			document_data_.Materials[i].Load(document, i, command_list, filename);
+		}
 	}
 	
 	// Generate mesh data for current document.
@@ -54,7 +42,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 
 		for (int i = 0; i < document.meshes.size(); i++)
 		{
-			document_data_.Meshes[i].Load(document, i, command_list);
+			document_data_.Meshes[i].Load(document, i, &document_data_.Materials, command_list);
 		}
 	}
 
@@ -121,7 +109,7 @@ std::unique_ptr<Mesh> Scene::LoadBasicGeometry(std::string& filepath, CommandLis
 		document = fx::gltf::LoadFromBinary(filepath);
 
 	Mesh m;
-	m.Load(document, 0, command_list);
+	m.Load(document, 0, &document_data_.Materials, command_list);
 	
 	document_data_.Meshes.push_back(m);
 
@@ -135,11 +123,6 @@ void Scene::Unload()
 	for(auto& mesh : document_data_.Meshes)
 	{
 		mesh.Unload();
-	}
-
-	for(auto& texture : document_data_.Textures)
-	{
-		texture.Reset();
 	}
 }
 

@@ -31,7 +31,7 @@ MeshData::MeshData(fx::gltf::Document const& doc, std::size_t mesh_index, std::s
 
 	if (primitive.material >= 0)
 	{
-		material_data_.SetData(doc.materials[primitive.material]);
+		material_index_ = primitive.material;
 	}
 }
 

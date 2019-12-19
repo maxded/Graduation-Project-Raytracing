@@ -2,8 +2,6 @@
 
 #include <gltf.h>
 
-#include "gltf_material_data.h"
-
 class MeshData
 {
 	friend class Mesh;
@@ -47,9 +45,9 @@ public:
 		return tex_coord0_buffer_;
 	}
 
-	const MaterialData& Material() const noexcept
+	const int& Material() const noexcept
 	{
-		return material_data_;
+		return material_index_;
 	}
 
 protected:
@@ -64,7 +62,7 @@ private:
 	BufferInfo tangent_buffer_{};
 	BufferInfo tex_coord0_buffer_{};
 
-	MaterialData material_data_{};
+	int material_index_ = -1;
 
 	static BufferInfo GetData(fx::gltf::Document const& doc, fx::gltf::Accessor const& accessor);
 	static uint32_t CalculateDataTypeSize(fx::gltf::Accessor const& accessor) noexcept;

@@ -4,9 +4,7 @@
 #include "index_buffer.h"
 #include "DirectXMath.h"
 #include "commandlist.h"
-#include "shader_data.h"
-#include "gltf_material_data.h"
-#include "shader_options.h"
+#include "material.h"
 
 #include "render_context.h"
 
@@ -33,10 +31,10 @@ public:
 
 	std::vector<ShaderOptions> RequiredShaderOptions() const;
 
-	std::vector<MeshMaterialData>& GetMaterials() { return materials_; }
+	void SetEmissive(DirectX::XMFLOAT3 color);
 
 protected:
-	void Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandList& command_list);
+	void Load(const fx::gltf::Document& doc, std::size_t mesh_index, std::vector<Material>* scene_materials, CommandList& command_list);
 
 	void Unload();
 private:
@@ -48,21 +46,17 @@ private:
 		SubMesh()
 			: IndexCount(0)
 			  , Topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
-			  , ShaderConfigurations{}
 		{}
-		void SetMaterial(const MaterialData& material_data);
-
+	
 		VertexBuffer			VBuffer;
 		IndexBuffer				IBuffer;
 		UINT					IndexCount;
 		D3D_PRIMITIVE_TOPOLOGY  Topology;
-		MeshMaterialData		Material;
-		ShaderOptions			ShaderConfigurations;
-	};
 
+		Material				Material;
+	};
 	
 	std::vector<SubMesh> sub_meshes_;
-	std::vector<MeshMaterialData> materials_;
 
 	MeshConstantData constant_data_;
 

@@ -94,7 +94,6 @@
   <ItemGroup>
     <ClInclude Include="Include\Core\neel_engine.h" />
     <ClInclude Include="Include\Graphics\generate_mips_pso.h" />
-    <ClInclude Include="Include\Graphics\glTF\gltf_texture_data.h" />
     <ClInclude Include="Include\Graphics\GUI.h" />
     <ClInclude Include="Include\Graphics\render_context.h" />
     <ClInclude Include="Include\ImGui\imconfig.h" />
@@ -115,7 +114,7 @@
     <ClInclude Include="Include\External\gltf.h" />
     <ClInclude Include="Include\External\json.hpp" />
     <ClInclude Include="Include\Core\game.h" />
-    <ClInclude Include="Include\Graphics\glTF\gltf_material_data.h" />
+    <ClInclude Include="Include\SceneRendering\material.h" />
     <ClInclude Include="Include\SceneRendering\shader_data.h" />
     <ClInclude Include="Include\SceneRendering\mesh.h" />
     <ClInclude Include="Include\Graphics\glTF\gltf_mesh_data.h" />
@@ -144,7 +143,6 @@
   <ItemGroup>
     <ClCompile Include="Source\Core\neel_engine.cpp" />
     <ClCompile Include="Source\Graphics\generate_mips_pso.cpp" />
-    <ClCompile Include="Source\Graphics\glTF\gltf_texture_data.cpp" />
     <ClCompile Include="Source\Graphics\GUI.cpp" />
     <ClCompile Include="Source\ImGui\imgui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -173,6 +171,7 @@
     <ClCompile Include="Source\Graphics\D3D12Resources\texture.cpp" />
     <ClCompile Include="Source\Graphics\D3D12Resources\vertex_buffer.cpp" />
     <ClCompile Include="Source\Core\game.cpp" />
+    <ClCompile Include="Source\SceneRendering\material.cpp" />
     <ClCompile Include="Source\SceneRendering\mesh.cpp" />
     <ClCompile Include="Source\Graphics\glTF\gltf_mesh_data.cpp" />
     <ClCompile Include="Source\SceneRendering\node.cpp" />

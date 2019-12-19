@@ -35,13 +35,13 @@ private:
 
 	enum RootParameters
 	{
-		MeshConstantBuffer = 0,	// ConstantBuffer<Mat> MatCB							: register(b0);  
-		LightPropertiesCb,		// ConstantBuffer<LightProperties> LightPropertiesCB	: register( b1 );
-		Materials,				// StructuredBuffer<MaterialData> Materials				: register( t0 );
-		PointLights,			// StructuredBuffer<PointLight> PointLights				: register( t1 );
-		SpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t2 );
-		DirectionalLights,		// StructuredBuffer<DirectionalLight> DirectionalLights : register (t3 );
-		Textures,				// Texture2D DiffuseTexture								: register( t4 );
+		Materials = 0,			// ConstantBuffer<MaterialData> Materials				: register( b0 );
+		MeshConstantBuffer,		// ConstantBuffer<Mat> MatCB							: register( b1 );		
+		LightPropertiesCb,		// ConstantBuffer<LightProperties> LightPropertiesCB	: register( b2 );
+		PointLights,			// StructuredBuffer<PointLight> PointLights				: register( t0 );
+		SpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t1 );
+		DirectionalLights,		// StructuredBuffer<DirectionalLight> DirectionalLights : register (t2 );
+		Textures,				// Texture2D textures[5]								: register( t3 );
 		NumRootParameters
 	};
 };

@@ -2,13 +2,13 @@
 
 enum class TextureUsage
 {
-	kAlbedo,
-	kDiffuse = kAlbedo,
-	// Treat Diffuse and Albedo textures the same.
-	kHeightmap,
-	kDepth = kHeightmap,
-	// Treat height and depth textures the same.
-	kNormalmap,
-	kRenderTarget,
-	// Texture is used as a render target.
+	Albedo,
+	Diffuse		= Albedo, // Treat Diffuse and Albedo textures the same.
+	Heightmap,
+	Depth		= Heightmap, // Treat height and depth textures the same.	
+	Normalmap,
+	MetalRoughnessmap,
+	Emissivemap,
+	AmbientOcclusionmap,
+	RenderTarget,	// Texture is used as a render target.	
 };

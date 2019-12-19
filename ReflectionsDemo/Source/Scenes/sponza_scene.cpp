@@ -2,7 +2,6 @@
 #include "neel_engine.h"
 #include "commandqueue.h"
 #include "window.h"
-#include "material.h"
 #include "render_context.h"
 
 #include "helpers.h"
@@ -46,7 +45,7 @@ void SponzaScene::Load(const std::string& filename)
 		color_clear_value.Color[3] = 1.0f;
 
 		Texture hdr_texture = Texture(color_desc, &color_clear_value,
-			TextureUsage::kRenderTarget,
+			TextureUsage::RenderTarget,
 			"HDR Texture");
 
 		// Create a depth buffer for the HDR render target.
@@ -58,7 +57,7 @@ void SponzaScene::Load(const std::string& filename)
 		depth_clear_value.DepthStencil = { 1.0f, 0 };
 
 		Texture depth_texture = Texture(depth_desc, &depth_clear_value,
-			TextureUsage::kDepth,
+			TextureUsage::Depth,
 			"Depth Render Target");
 
 		// Attach the HDR texture to the HDR render target.
@@ -83,18 +82,16 @@ void SponzaScene::Load(const std::string& filename)
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, document_data_.Textures.size(), 4);
+		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 3);
 
 		CD3DX12_ROOT_PARAMETER1 root_parameters[RootParameters::NumRootParameters];
-		root_parameters[RootParameters::MeshConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-		root_parameters[RootParameters::LightPropertiesCb].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::Materials].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::PointLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::SpotLights].InitAsShaderResourceView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[RootParameters::DirectionalLights].InitAsShaderResourceView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::Materials].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::MeshConstantBuffer].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);	
+		root_parameters[RootParameters::LightPropertiesCb].InitAsConstants(sizeof(Scene::SceneLightProperties) / 4, 2, 0, D3D12_SHADER_VISIBILITY_PIXEL);		
+		root_parameters[RootParameters::PointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::SpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[RootParameters::DirectionalLights].InitAsShaderResourceView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
 		root_parameters[RootParameters::Textures].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
-
-		CD3DX12_STATIC_SAMPLER_DESC linear_repeat_sampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR);
 
 		CD3DX12_STATIC_SAMPLER_DESC static_sampler
 		(
@@ -108,7 +105,7 @@ void SponzaScene::Load(const std::string& filename)
 		);
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(RootParameters::NumRootParameters, root_parameters, 1, &linear_repeat_sampler, root_signature_flags);
+		root_signature_description.Init_1_1(RootParameters::NumRootParameters, root_parameters, 1, &static_sampler, root_signature_flags);
 
 		sponza_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
@@ -222,12 +219,6 @@ void SponzaScene::Render(CommandList& command_list)
 	command_list.SetGraphicsDynamicStructuredBuffer(RootParameters::SpotLights, spot_lights_);
 	command_list.SetGraphicsDynamicStructuredBuffer(RootParameters::DirectionalLights, directional_lights_);
 
-	// Stage all descriptors for textures.
-	for (int i = 0; i < document_data_.Textures.size(); i++)
-	{
-		command_list.SetShaderResourceView(RootParameters::Textures, i, document_data_.Textures[i], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	}
-
 	// Loop over all instances of scene and render
 	for (auto& instance : mesh_instances_)
 	{
@@ -253,7 +244,7 @@ void SponzaScene::Render(CommandList& command_list)
 		
 		world_matrix = scaling_matrix * rotation_matrix * translation_matrix;
 
-		sphere_mesh_->GetMaterials()[0].EmissiveFactor = DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z);
+		sphere_mesh_->SetEmissive(DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z));
 
 		sphere_mesh_->SetWorldMatrix(world_matrix);
 		sphere_mesh_->Render(render_context);

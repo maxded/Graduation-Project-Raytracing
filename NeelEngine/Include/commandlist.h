@@ -165,7 +165,7 @@ public:
 	/**
 	* Load a texture by a filename.
 	*/
-	void LoadTextureFromFile(Texture& texture, const std::string& filename, TextureUsage texture_usage = TextureUsage::kAlbedo);
+	void LoadTextureFromFile(Texture& texture, const std::string& filename, TextureUsage texture_usage = TextureUsage::Albedo);
 
 	/**
 	 * Clear a texture.
@@ -439,5 +439,9 @@ private:
 
 	// Pipeline state object for Mip map generation.
 	std::unique_ptr<GenerateMipsPSO> generate_mips_pso_;
+
+	// Keep track of loaded textures to avoid loading the same texture multiple times.
+	static std::map<std::wstring, ID3D12Resource* > texture_cache_;
+	static std::mutex ms_texture_cache_mutex_;
 };
 

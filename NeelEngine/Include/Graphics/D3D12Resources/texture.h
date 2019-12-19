@@ -10,14 +10,14 @@
 class Texture : public Resource
 {
 public:
-	explicit Texture(TextureUsage texture_usage = TextureUsage::kAlbedo,
+	explicit Texture(TextureUsage texture_usage = TextureUsage::Albedo,
 	                 const std::string& name = "Texture");
 	explicit Texture(const D3D12_RESOURCE_DESC& resource_desc,
 	                 const D3D12_CLEAR_VALUE* clear_value = nullptr,
-	                 TextureUsage texture_usage = TextureUsage::kAlbedo,
+	                 TextureUsage texture_usage = TextureUsage::Albedo,
 	                 const std::string& name = "Texture");
 	explicit Texture(Microsoft::WRL::ComPtr<ID3D12Resource> resource,
-	                 TextureUsage texture_usage = TextureUsage::kAlbedo,
+	                 TextureUsage texture_usage = TextureUsage::Albedo,
 	                 const std::string& name = "Texture");
 
 	Texture(const Texture& copy);
