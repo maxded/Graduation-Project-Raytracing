@@ -191,7 +191,7 @@ void Window::OnUpdate(UpdateEventArgs& e)
 	// Wait for the swapchain to finish presenting
 	::WaitForSingleObjectEx(swap_chain_event_, 100, TRUE);
 
-	gui_.NewFrame();
+	//gui_.NewFrame();
 	
 	update_clock_.Tick();
 
@@ -404,7 +404,7 @@ UINT Window::Present(const Texture& texture)
 	RenderTarget render_target;
 	render_target.AttachTexture(AttachmentPoint::kColor0, back_buffer);
 
-	gui_.Render(command_list, render_target);
+	//gui_.Render(command_list, render_target);
 
 	command_list->TransitionBarrier(back_buffer, D3D12_RESOURCE_STATE_PRESENT);
 	command_queue->ExecuteCommandList(command_list);

@@ -12,7 +12,23 @@
 
 class Mesh
 {
+private:
 	friend class Scene;
+
+	struct SubMesh
+	{
+		SubMesh()
+			: IndexCount(0)
+			, Topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
+		{}
+
+		VertexBuffer			VBuffer;
+		IndexBuffer				IBuffer;
+		UINT					IndexCount;
+		D3D_PRIMITIVE_TOPOLOGY  Topology;
+
+		Material				Material;
+	};
 public:
 	Mesh();
 	~Mesh();
@@ -31,6 +47,8 @@ public:
 
 	std::vector<ShaderOptions> RequiredShaderOptions() const;
 
+	std::vector<SubMesh>& GetSubMeshes() { return sub_meshes_; };
+
 	void SetEmissive(DirectX::XMFLOAT3 color);
 
 protected:
@@ -40,21 +58,6 @@ protected:
 private:
 	DirectX::XMMATRIX	base_transform_;
 	std::string			name_;
-	
-	struct SubMesh
-	{
-		SubMesh()
-			: IndexCount(0)
-			  , Topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST)
-		{}
-	
-		VertexBuffer			VBuffer;
-		IndexBuffer				IBuffer;
-		UINT					IndexCount;
-		D3D_PRIMITIVE_TOPOLOGY  Topology;
-
-		Material				Material;
-	};
 	
 	std::vector<SubMesh> sub_meshes_;
 

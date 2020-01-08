@@ -43,6 +43,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 		for (int i = 0; i < document.meshes.size(); i++)
 		{
 			document_data_.Meshes[i].Load(document, i,command_list, &materials);
+			document_data_.TotalNumberMeshes += document_data_.Meshes[i].GetSubMeshes().size();
 		}
 	}
 
@@ -89,13 +90,13 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 
 	// Load basic geometry for scene (debugging purposes)
 	std::string basic_geometry[3];
-	basic_geometry[0] = "Assets/BasicGeometry/Cube.gltf";
-	basic_geometry[1] = "Assets/BasicGeometry/Sphere.gltf";
-	basic_geometry[2] = "Assets/BasicGeometry/Cone.gltf";
+	//basic_geometry[0] = "Assets/BasicGeometry/Cube.gltf";
+	//basic_geometry[1] = "Assets/BasicGeometry/Sphere.gltf";
+	//basic_geometry[2] = "Assets/BasicGeometry/Cone.gltf";
 
-	cube_mesh_		= LoadBasicGeometry(basic_geometry[0], command_list);
-	sphere_mesh_	= LoadBasicGeometry(basic_geometry[1], command_list);
-	cone_mesh_		= LoadBasicGeometry(basic_geometry[2], command_list);	
+	//cube_mesh_		= LoadBasicGeometry(basic_geometry[0], command_list);
+	//sphere_mesh_	= LoadBasicGeometry(basic_geometry[1], command_list);
+	//cone_mesh_		= LoadBasicGeometry(basic_geometry[2], command_list);	
 }
 
 std::unique_ptr<Mesh> Scene::LoadBasicGeometry(std::string& filepath, CommandList& command_list)

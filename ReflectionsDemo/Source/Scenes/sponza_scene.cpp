@@ -203,7 +203,7 @@ void SponzaScene::Render(CommandList& command_list)
 	RenderContext render_context
 	{ 
 		command_list,
-		ShaderOptions::None, 
+		ShaderOptions::USE_AUTO_COLOR, 
 		ShaderOptions::None, 
 		sponza_pipeline_state_map_ 
 	};
@@ -251,7 +251,7 @@ void SponzaScene::Render(CommandList& command_list)
 	}
 
 	// Render GUI.
-	OnGui();
+	//OnGui();
 }
 
 RenderTarget& SponzaScene::GetRenderTarget() 

@@ -95,6 +95,43 @@ void CommandList::AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> before_
 	}
 }
 
+void CommandList::AllocateUAVBuffer(UINT64 buffer_size, Resource& resource, D3D12_RESOURCE_STATES initial_state)
+{
+	auto device = NeelEngine::Get().GetDevice();
+
+	ComPtr<ID3D12Resource> d3d12_resource;
+	
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(buffer_size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+		initial_state,
+		nullptr,
+		IID_PPV_ARGS(&d3d12_resource)));
+
+	// Add the resource to the global resource State tracker.
+	ResourceStateTracker::AddGlobalResourceState(d3d12_resource.Get(), initial_state);
+
+	TrackResource(d3d12_resource);
+
+	resource.SetD3D12Resource(d3d12_resource);
+}
+
+void CommandList::AllocateUAVBuffer(UINT64 buffer_size, ID3D12Resource** ppResource, D3D12_RESOURCE_STATES initial_state)
+{
+	auto device = NeelEngine::Get().GetDevice();
+	
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(buffer_size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+		initial_state,
+		nullptr,
+		IID_PPV_ARGS(ppResource)));
+
+	ResourceStateTracker::AddGlobalResourceState(*ppResource, initial_state);
+}
+
 void CommandList::AliasingBarrier(const Resource& before_resource, const Resource& after_resource, bool flush_barriers)
 {
 	AliasingBarrier(before_resource.GetD3D12Resource(), after_resource.GetD3D12Resource());
@@ -527,7 +564,6 @@ void CommandList::GenerateMips(Texture& texture)
 		// This ensures GPU validation.
 		CopyResource(alias_resource, resource);
 
-
 		// Add an aliasing barrier for the UAV compatible resource.
 		AliasingBarrier(alias_resource, uav_resource);
 	}
@@ -693,9 +729,24 @@ void CommandList::SetGraphics32BitConstants(uint32_t root_parameter_index, uint3
 	d3d12_command_list_->SetGraphicsRoot32BitConstants(root_parameter_index, num_constants, constants, 0);
 }
 
+void CommandList::SetComputeDynamicConstantBuffer(uint32_t root_parameter_index, size_t size_in_bytes,
+	const void* buffer_data)
+{
+	// Constant buffers must be 256-byte aligned.
+	auto heap_allococation = upload_buffer_->Allocate(size_in_bytes, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+	memcpy(heap_allococation.CPU, buffer_data, size_in_bytes);
+
+	d3d12_command_list_->SetComputeRootConstantBufferView(root_parameter_index, heap_allococation.GPU);
+}
+
 void CommandList::SetCompute32BitConstants(uint32_t root_parameter_index, uint32_t num_constants, const void* constants)
 {
 	d3d12_command_list_->SetComputeRoot32BitConstants(root_parameter_index, num_constants, constants, 0);
+}
+
+void CommandList::SetComputeAccelerationStructure(uint32_t root_parameter_index, D3D12_GPU_VIRTUAL_ADDRESS address)
+{
+	d3d12_command_list_->SetComputeRootShaderResourceView(root_parameter_index, address);
 }
 
 void CommandList::SetVertexBuffer(uint32_t slot, const VertexBuffer& vertex_buffer)
@@ -793,6 +844,13 @@ void CommandList::SetPipelineState(Microsoft::WRL::ComPtr<ID3D12PipelineState> p
 	d3d12_command_list_->SetPipelineState(pipeline_state.Get());
 
 	TrackResource(pipeline_state);
+}
+
+void CommandList::SetStateObject(Microsoft::WRL::ComPtr<ID3D12StateObject> state_object)
+{
+	d3d12_command_list_->SetPipelineState1(state_object.Get());
+
+	TrackResource(state_object);
 }
 
 void CommandList::SetGraphicsRootSignature(const RootSignature& rootSignature)
@@ -957,6 +1015,18 @@ void CommandList::Dispatch(uint32_t num_groups_x, uint32_t num_groups_y, uint32_
 	}
 
 	d3d12_command_list_->Dispatch(num_groups_x, num_groups_y, num_groups_z);
+}
+
+void CommandList::DispatchRays(D3D12_DISPATCH_RAYS_DESC& dispatch_desc)
+{
+	FlushResourceBarriers();
+
+	for (int i = 0; i < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++i)
+	{
+		dynamic_descriptor_heap_[i]->CommitStagedDescriptorsForDispatch(*this);
+	}
+
+	d3d12_command_list_->DispatchRays(&dispatch_desc);
 }
 
 bool CommandList::Close(CommandList& pending_command_list)

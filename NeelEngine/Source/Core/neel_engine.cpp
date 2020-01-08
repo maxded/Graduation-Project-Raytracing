@@ -164,7 +164,7 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> NeelEngine::GetAdapter(bool b_use_warp) co
 			// is favored.
 			if ((dxgi_adapter_desc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
 				SUCCEEDED(D3D12CreateDevice(dxgi_adapter1.Get(),
-					D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)) &&
+					D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)) &&
 				dxgi_adapter_desc1.DedicatedVideoMemory > max_dedicated_video_memory)
 			{
 				max_dedicated_video_memory = dxgi_adapter_desc1.DedicatedVideoMemory;
@@ -176,16 +176,15 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> NeelEngine::GetAdapter(bool b_use_warp) co
 	return dxgi_adapter4;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device2> NeelEngine::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter) const
+Microsoft::WRL::ComPtr<ID3D12Device5> NeelEngine::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter) const
 {
-	ComPtr<ID3D12Device2> d3d12_device2;
-	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12_device2)));
-	//    NAME_D3D12_OBJECT(d3d12Device2);
+	ComPtr<ID3D12Device5> d3d12_device5;
+	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&d3d12_device5)));
 
 	// Enable debug messages in debug mode.
 #if defined(_DEBUG)
 	ComPtr<ID3D12InfoQueue> p_info_queue;
-	if (SUCCEEDED(d3d12_device2.As(&p_info_queue)))
+	if (SUCCEEDED(d3d12_device5.As(&p_info_queue)))
 	{
 		p_info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 		p_info_queue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -224,7 +223,7 @@ Microsoft::WRL::ComPtr<ID3D12Device2> NeelEngine::CreateDevice(Microsoft::WRL::C
 	}
 #endif
 
-	return d3d12_device2;
+	return d3d12_device5;
 }
 
 bool NeelEngine::CheckTearingSupport() const
@@ -354,7 +353,7 @@ void NeelEngine::Quit(int exit_code)
 	PostQuitMessage(exit_code);
 }
 
-Microsoft::WRL::ComPtr<ID3D12Device2> NeelEngine::GetDevice() const
+Microsoft::WRL::ComPtr<ID3D12Device5> NeelEngine::GetDevice() const
 {
 	return d3d12_device_;
 }

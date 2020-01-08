@@ -93,6 +93,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\Core\neel_engine.h" />
+    <ClInclude Include="Include\Graphics\D3D12Resources\acceleration_structure.h" />
+    <ClInclude Include="Include\Graphics\D3D12Resources\shader_table.h" />
     <ClInclude Include="Include\Graphics\generate_mips_pso.h" />
     <ClInclude Include="Include\Graphics\GUI.h" />
     <ClInclude Include="Include\Graphics\render_context.h" />
@@ -142,22 +144,29 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\neel_engine.cpp" />
+    <ClCompile Include="Source\Graphics\D3D12Resources\acceleration_structure.cpp" />
+    <ClCompile Include="Source\Graphics\D3D12Resources\shader_table.cpp" />
     <ClCompile Include="Source\Graphics\generate_mips_pso.cpp" />
     <ClCompile Include="Source\Graphics\GUI.cpp" />
     <ClCompile Include="Source\ImGui\imgui.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ImGui\imgui_demo.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ImGui\imgui_draw.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ImGui\imgui_impl_win32.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\ImGui\imgui_widgets.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\SceneRendering\camera.cpp" />
     <ClCompile Include="Source\commandlist.cpp" />
@@ -200,9 +209,11 @@
     </FxCompile>
     <FxCompile Include="EngineShaders\ImGUI_PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="EngineShaders\ImGUI_VS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

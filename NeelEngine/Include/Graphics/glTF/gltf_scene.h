@@ -76,6 +76,7 @@ protected:
 		}
 
 		std::vector<Mesh>		Meshes;
+		int TotalNumberMeshes = 0;
 	};
 
 	DocumentData	document_data_;

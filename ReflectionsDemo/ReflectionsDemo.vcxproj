@@ -94,12 +94,14 @@ xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
   <ItemGroup>
     <ClInclude Include="Include\reflections_demo.h" />
     <ClInclude Include="Include\Scenes\default_scene.h" />
+    <ClInclude Include="Include\Scenes\raytracing_scene.h" />
     <ClInclude Include="Include\Scenes\sponza_scene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\reflections_demo.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\Scenes\default_scene.cpp" />
+    <ClCompile Include="Source\Scenes\raytracing_scene.cpp" />
     <ClCompile Include="Source\Scenes\sponza_scene.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -122,6 +124,20 @@ xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
     <FxCompile Include="Shaders\HDR_VS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\Raytracing.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Library</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.3</ShaderModel>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </EntryPointName>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">g_p%(Filename)</VariableName>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)\CompiledShaders\%(Filename).hlsl.h</HeaderFileOutput>
+      <HeaderFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)\CompiledShaders\%(Filename).hlsl.h</HeaderFileOutput>
+      <VariableName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">g_p%(Filename)</VariableName>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+      </EntryPointName>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

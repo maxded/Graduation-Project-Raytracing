@@ -42,7 +42,7 @@ public:
 	/**
 	 * Get direct access to the ID3D12GraphicsCommandList2 interface.
 	 */
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> GetGraphicsCommandList() const
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> GetGraphicsCommandList() const
 	{
 		return d3d12_command_list_;
 	}
@@ -82,7 +82,13 @@ public:
 	void AliasingBarrier(const Resource& before_resource, const Resource& after_resource, bool flush_barriers = false);
 	void AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> before_resource,
 	                     Microsoft::WRL::ComPtr<ID3D12Resource> after_resource, bool flush_barriers = false);
-
+	
+	/**
+	* Allocate UAV buffer 
+	*/
+	void AllocateUAVBuffer(UINT64 buffer_size, Resource& resource, D3D12_RESOURCE_STATES initial_state= D3D12_RESOURCE_STATE_COMMON);
+	void AllocateUAVBuffer(UINT64 buffer_size, ID3D12Resource** ppResource, D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COMMON);
+	
 	/**
 	 * Flush any barriers that have been pushed to the command list.
 	 */
@@ -218,6 +224,18 @@ public:
 	}
 
 	/**
+	* Set a dynamic constant buffer data to an inline descriptor in the root
+	* signature.
+	*/
+	void SetComputeDynamicConstantBuffer(uint32_t root_parameter_index, size_t size_in_bytes, const void* buffer_data);
+
+	template <typename T>
+	void SetComputeDynamicConstantBuffer(uint32_t root_parameter_index, const T& data)
+	{
+		SetComputeDynamicConstantBuffer(root_parameter_index, sizeof(T), &data);
+	}
+	
+	/**
 	 * Set a set of 32-bit constants on the compute pipeline.
 	 */
 	void SetCompute32BitConstants(uint32_t root_parameter_index, uint32_t num_constants, const void* constants);
@@ -228,6 +246,8 @@ public:
 		static_assert(sizeof(T) % sizeof(uint32_t) == 0, "Size of type must be a multiple of 4 bytes");
 		SetCompute32BitConstants(root_parameter_index, sizeof(T) / sizeof(uint32_t), &constants);
 	}
+
+	void SetComputeAccelerationStructure(uint32_t root_parameter_index, D3D12_GPU_VIRTUAL_ADDRESS address);
 
 	/**
 	 * Set the vertex buffer to the rendering pipeline.
@@ -294,6 +314,11 @@ public:
 	void SetPipelineState(Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeline_state);
 
 	/**
+	* Set the State object on the command list.
+	*/
+	void SetStateObject(Microsoft::WRL::ComPtr<ID3D12StateObject> state_object);
+
+	/**
 	 * Set the current root signature on the command list.
 	 */
 	void SetGraphicsRootSignature(const RootSignature& root_signature);
@@ -343,6 +368,12 @@ public:
 	 * Dispatch a compute shader.
 	 */
 	void Dispatch(uint32_t num_groups_x, uint32_t num_groups_y = 1, uint32_t num_groups_z = 1);
+
+	/**
+	* Dispatch rays.
+	*/
+	void DispatchRays(D3D12_DISPATCH_RAYS_DESC& dispatch_desc);
+	
 
 	/***************************************************************************
 	 * Methods defined below are only intended to be used by internal classes. *
@@ -399,7 +430,7 @@ private:
 	using TrackedObjects = std::vector<Microsoft::WRL::ComPtr<ID3D12Object>>;
 
 	D3D12_COMMAND_LIST_TYPE d3d12_command_list_type_;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> d3d12_command_list_;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> d3d12_command_list_;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> d3d12_command_allocator_;
 
 	// For copy queues, it may be necessary to generate mips while loading textures.

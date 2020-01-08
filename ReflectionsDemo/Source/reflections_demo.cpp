@@ -9,6 +9,7 @@
 
 #include "sponza_scene.h"
 #include "default_scene.h"
+#include "raytracing_scene.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -81,6 +82,7 @@ ReflectionsDemo::ReflectionsDemo(const std::wstring& name, int width, int height
 	  , width_(width)
 	  , height_(height)
 	  , render_scale_(1.0f)
+	  , scissor_rect_(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
 {
 }
 
@@ -92,11 +94,11 @@ ReflectionsDemo::~ReflectionsDemo()
 bool ReflectionsDemo::LoadContent()
 {
 	auto device = NeelEngine::Get().GetDevice();
-	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto command_list = command_queue->GetCommandList();
 
-	current_scene_ = std::make_unique<SponzaScene>();
-	current_scene_->Load("Assets/Sponza/Sponza.gltf");
+	current_scene_ = std::make_unique<RayTracingScene>();
+	current_scene_->Load("Assets/BasicGeometry/Cube.gltf");
 
 	// Create the SDR Root Signature
 	{
@@ -211,6 +213,7 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 	// Perform HDR -> SDR tonemapping directly to the Window's render target.
 	command_list->SetRenderTarget(p_window_->GetRenderTarget());
 	command_list->SetViewport(p_window_->GetRenderTarget().GetViewport());
+	command_list->SetScissorRect(scissor_rect_);
 	command_list->SetPipelineState(sdr_pipeline_state_);
 	command_list->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	command_list->SetGraphicsRootSignature(sdr_root_signature_);

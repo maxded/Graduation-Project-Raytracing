@@ -83,7 +83,7 @@ public:
 	/**
 	 * Get the Direct3D 12 device
 	 */
-	Microsoft::WRL::ComPtr<ID3D12Device2> GetDevice() const;
+	Microsoft::WRL::ComPtr<ID3D12Device5> GetDevice() const;
 	/**
 	 * Get a command queue. Valid types are:
 	 * - D3D12_COMMAND_LIST_TYPE_DIRECT : Can be used for draw, dispatch, or copy commands.
@@ -127,7 +127,7 @@ protected:
 	void Initialize();
 
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> GetAdapter(bool b_use_warp) const;
-	Microsoft::WRL::ComPtr<ID3D12Device2> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter) const;
+	Microsoft::WRL::ComPtr<ID3D12Device5> CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter) const;
 	bool CheckTearingSupport() const;
 
 private:
@@ -137,7 +137,7 @@ private:
 
 	HINSTANCE h_instance_;
 
-	Microsoft::WRL::ComPtr<ID3D12Device2> d3d12_device_;
+	Microsoft::WRL::ComPtr<ID3D12Device5> d3d12_device_;
 
 	std::shared_ptr<CommandQueue> direct_command_queue_;
 	std::shared_ptr<CommandQueue> compute_command_queue_;

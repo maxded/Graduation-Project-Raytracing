@@ -55,6 +55,8 @@ private:
 	RootSignature sdr_root_signature_;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> sdr_pipeline_state_;
 
+	D3D12_RECT scissor_rect_;
+
 	// Set to true if the Shift key is pressed.
 	bool shift_;
 

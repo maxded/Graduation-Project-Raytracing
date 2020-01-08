@@ -26,6 +26,11 @@ inline void ThrowIfFailed(HRESULT hr)
 	}
 }
 
+inline void ThrowIfFalse(bool value)
+{
+	ThrowIfFailed(value ? S_OK : E_FAIL);
+}
+
 // Hashers for view descriptions.
 namespace std
 {
@@ -106,12 +111,11 @@ namespace std
 				hash_combine(seed, srv_desc.TextureCubeArray.NumCubes);
 				hash_combine(seed, srv_desc.TextureCubeArray.ResourceMinLODClamp);
 				break;
-			default:
+			case D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE:
+				hash_combine(seed, srv_desc.RaytracingAccelerationStructure.Location);
 				break;
-				// TODO: Update Visual Studio?
-				//case D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE:
-				//    hash_combine(seed, srvDesc.RaytracingAccelerationStructure.Location);
-				//    break;
+			default:
+				break;	
 			}
 
 			return seed;

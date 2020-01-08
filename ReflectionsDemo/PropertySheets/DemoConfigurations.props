@@ -8,7 +8,11 @@
   </PropertyGroup>  
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)Include;$(ProjectDir)Include/Scenes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      $(ProjectDir)Include;
+      $(ProjectDir)Include/Scenes;
+      $(ProjectDir)Intermediate\$(Platform)\$(Configuration);
+      %(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>
       $(SolutionDir)NeelEngine/Include;
       $(SolutionDir)NeelEngine/Include/Graphics;
