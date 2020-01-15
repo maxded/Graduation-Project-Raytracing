@@ -3,7 +3,7 @@
 
 struct SceneConstantBuffer
 {
-	float4x4 projectionToWorld;
+	float4x4 InverseViewProj;
 	float4 cameraPosition;
 };
 
@@ -27,19 +27,20 @@ inline void GenerateCameraRay(uint2 index, out float3 origin, out float3 directi
 	screenPos.y = -screenPos.y;
 
 	// Unproject the pixel coordinate into a ray.
-	float4 world = mul(float4(screenPos, 0, 1), sceneCB.projectionToWorld);
+	float4 world = mul(sceneCB.InverseViewProj, float4(screenPos, 0, 1));
 
-	world.xyz /= world.w;
-	origin = sceneCB.cameraPosition.xyz;
-	direction = normalize(world.xyz - origin);
+	world.xyz  /= world.w;
+	origin	   = sceneCB.cameraPosition.xyz;
+	direction  = normalize(world.xyz - origin);
 }
-
 
 [shader("raygeneration")]
 void MyRaygenShader()
 {
 	float3 rayDir;
 	float3 origin;
+
+	GenerateCameraRay(DispatchRaysIndex().xy, origin, rayDir);
 
 	// Trace the ray.
     // Set the ray's extents.
@@ -51,7 +52,7 @@ void MyRaygenShader()
 	ray.TMin = 0.001;
 	ray.TMax = 10000.0;
 	RayPayload payload = { float4(0, 0, 0, 0) };
-	TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+	TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 1, 0, ray, payload);
 
 	// Write the raytraced color to the output texture.
 	RenderTarget[DispatchRaysIndex().xy] = payload.color;
@@ -60,7 +61,8 @@ void MyRaygenShader()
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 {
-	payload.color = float4(1.0, 0.0, 0.0, 1.0);
+	float4 hitcolor = float4(1.0, 0.0, 0.0, 1.0);
+	payload.color = hitcolor;
 }
 
 [shader("miss")]

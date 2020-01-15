@@ -26,10 +26,14 @@ RayTracingScene::~RayTracingScene()
 void RayTracingScene::Load(const std::string & filename)
 {
 	auto device			= NeelEngine::Get().GetDevice();
-	auto command_queue	= NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_COPY);
+	auto command_queue	= NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto command_list	= command_queue->GetCommandList();
 	
 	LoadFromFile(filename, *command_list);
+
+	int fence = 0;
+	fence = command_queue->ExecuteCommandList(command_list);
+	command_queue->WaitForFenceValue(fence);
 
 	CreateRootSignatures();
 
@@ -46,8 +50,10 @@ void RayTracingScene::Update(UpdateEventArgs & e)
 {
 	Camera& camera = Camera::Get();
 
-	scene_buffer_.ViewProj = camera.GetViewMatrix() * camera.GetProjectionMatrix();
-	scene_buffer_.CamPos   = camera.GetTranslation();
+	DirectX::XMMATRIX view_proj = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+	
+	scene_buffer_.InverseViewProj = DirectX::XMMatrixInverse(nullptr, view_proj);
+	scene_buffer_.CamPos = camera.GetTranslation();
 }
 
 void RayTracingScene::PrepareRender(CommandList & command_list)
@@ -57,9 +63,6 @@ void RayTracingScene::PrepareRender(CommandList & command_list)
 
 void RayTracingScene::Render(CommandList & command_list)
 {
-	command_list.SetComputeRootSignature(raytracing_global_root_signature_);
-	command_list.SetStateObject(raytracing_state_object_);
-	
 	// Bind the heaps, acceleration strucutre and dispatch rays.
 	D3D12_DISPATCH_RAYS_DESC dispatch_desc = {};
 
@@ -75,6 +78,9 @@ void RayTracingScene::Render(CommandList & command_list)
 	dispatch_desc.Height	= 720;
 	dispatch_desc.Depth		= 1;
 
+	command_list.SetComputeRootSignature(raytracing_global_root_signature_);
+	command_list.SetStateObject(raytracing_state_object_);
+
 	command_list.SetUnorderedAccessView(GlobalRootSignatureParams::RenderOutputSlot, 0, raytracing_output_);
 	command_list.SetComputeAccelerationStructure(GlobalRootSignatureParams::AccelerationStructureSlot, top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress());
 	command_list.SetComputeDynamicConstantBuffer(GlobalRootSignatureParams::SceneConstantBuffer, scene_buffer_);
@@ -82,9 +88,8 @@ void RayTracingScene::Render(CommandList & command_list)
 	command_list.DispatchRays(dispatch_desc);
 }
 
-RenderTarget & RayTracingScene::GetRenderTarget()
+RenderTarget& RayTracingScene::GetRenderTarget()
 {
-	render_target_.AttachTexture(AttachmentPoint::kColor0, raytracing_output_);
 	return render_target_;
 }
 
@@ -114,18 +119,6 @@ void RayTracingScene::CreateRootSignatures()
 		root_signature_description.Init_1_1(GlobalRootSignatureParams::NumRootParameters, root_parameters, 0, nullptr);
 
 		raytracing_global_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
-	}
-
-	// Local Root Signature
-	{
-		CD3DX12_ROOT_PARAMETER1 root_parameters[LocalRootSignatureParams::NumRootParameters];
-		root_parameters[LocalRootSignatureParams::ConstantBuffer].InitAsConstantBufferView(0, 0);
-
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(LocalRootSignatureParams::NumRootParameters, root_parameters, 0, nullptr);
-		root_signature_description.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-
-		raytracing_local_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
 }
 
@@ -158,14 +151,8 @@ void RayTracingScene::CreateRaytracingPipelineStateObject()
 	UINT attribute_size = 2 * sizeof(float); // float2 barycentrics
 	shader_config->Config(payload_size, attribute_size);
 
-	// Local root siganture and shader association
-	//auto local_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
-	//local_root_signature->SetRootSignature(raytracing_local_root_signature_.GetRootSignature().Get());
-
-	//auto root_signature_association = raytracing_pipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
-	//root_signature_association->SetSubobjectToAssociate(*local_root_signature);
-	//root_signature_association->AddExport(c_raygen_shader_name_);
-
+	// Local Root Signature
+	
 	// GLobal root signature
 	auto global_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
 	global_root_signature->SetRootSignature(raytracing_global_root_signature_.GetRootSignature().Get());
@@ -173,6 +160,10 @@ void RayTracingScene::CreateRaytracingPipelineStateObject()
 	// Pipeline config
 	auto pipeline_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
 	pipeline_config->Config(1); // Max recusion of rays.
+
+#if _DEBUG
+	PrintStateObjectDesc(raytracing_pipeline);
+#endif
 	
 	// Create state object
 	ThrowIfFailed(device->CreateStateObject(raytracing_pipeline, IID_PPV_ARGS(&raytracing_state_object_)));
@@ -183,14 +174,14 @@ void RayTracingScene::BuildAccelerationStructures()
 	auto device			= NeelEngine::Get().GetDevice();
 	auto command_queue	= NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto command_list	= command_queue->GetCommandList();
-
+	
 	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descs(document_data_.TotalNumberMeshes);
 
 	int index = 0;	
 	for(auto& geometry : document_data_.Meshes)
 	{
 		for (auto& submesh : geometry.GetSubMeshes())
-		{
+		{		
 			geometry_descs[index].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;		
 			geometry_descs[index].Triangles.IndexBuffer		= submesh.IBuffer.GetIndexBufferView().BufferLocation;
 			geometry_descs[index].Triangles.IndexCount		= submesh.IBuffer.GetNumIndicies();
@@ -217,7 +208,7 @@ void RayTracingScene::BuildAccelerationStructures()
 	top_level_inputs.pGeometryDescs = nullptr;
 	top_level_inputs.Type			= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
-	// Bottom level 
+	// Bottom level
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottom_level_build_desc = {};
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS &bottom_level_inputs = bottom_level_build_desc.Inputs;
 	bottom_level_inputs.DescsLayout		= D3D12_ELEMENTS_LAYOUT_ARRAY;
@@ -256,13 +247,11 @@ void RayTracingScene::BuildAccelerationStructures()
 	command_list->GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&bottom_level_build_desc, 0, nullptr);
 	command_list->UAVBarrier(bottom_level_acceleration_structure_);
 	command_list->GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&top_level_build_desc, 0, nullptr);
-	
-	// Execute command list and wait for fence value.
-	uint64_t fence = 0;
+
+	int fence = 0;
 	fence = command_queue->ExecuteCommandList(command_list);
 	command_queue->WaitForFenceValue(fence);
 
-	// Reset the scratch resources.
 	bottom_level_acceleration_structure_.GetScratchResource().Reset();
 	top_level_acceleration_structure_.GetScratchResource().Reset();
 }
@@ -277,9 +266,9 @@ void RayTracingScene::BuildShaderTables()
 
 	auto GetShaderidentifiers = [&](auto* state_object_properties)
 	{
-		raygen_shader_id = state_object_properties->GetShaderIdentifier(c_raygen_shader_name_);
-		miss_shader_id = state_object_properties->GetShaderIdentifier(c_miss_shader_name_);
-		hitgroup_shader_id = state_object_properties->GetShaderIdentifier(c_hit_group_name_);
+		raygen_shader_id	= state_object_properties->GetShaderIdentifier(c_raygen_shader_name_);
+		miss_shader_id		= state_object_properties->GetShaderIdentifier(c_miss_shader_name_);
+		hitgroup_shader_id	= state_object_properties->GetShaderIdentifier(c_hit_group_name_);
 	};
 
 	UINT shader_id_size;
@@ -343,4 +332,6 @@ void RayTracingScene::CreateRayTracingOutputResource()
 
 	raytracing_output_.SetD3D12Resource(d3d12_resource);
 	raytracing_output_.SetName("RaytracingOutput Texture");
+
+	render_target_.AttachTexture(AttachmentPoint::kColor0, raytracing_output_);
 }

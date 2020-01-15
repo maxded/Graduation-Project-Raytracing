@@ -42,7 +42,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list)
 
 		for (int i = 0; i < document.meshes.size(); i++)
 		{
-			document_data_.Meshes[i].Load(document, i,command_list, &materials);
+			document_data_.Meshes[i].Load(document, i, command_list, &materials);
 			document_data_.TotalNumberMeshes += document_data_.Meshes[i].GetSubMeshes().size();
 		}
 	}

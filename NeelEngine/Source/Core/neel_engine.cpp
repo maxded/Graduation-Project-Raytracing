@@ -179,7 +179,7 @@ Microsoft::WRL::ComPtr<IDXGIAdapter4> NeelEngine::GetAdapter(bool b_use_warp) co
 Microsoft::WRL::ComPtr<ID3D12Device5> NeelEngine::CreateDevice(Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter) const
 {
 	ComPtr<ID3D12Device5> d3d12_device5;
-	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&d3d12_device5)));
+	ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12_device5)));
 
 	// Enable debug messages in debug mode.
 #if defined(_DEBUG)

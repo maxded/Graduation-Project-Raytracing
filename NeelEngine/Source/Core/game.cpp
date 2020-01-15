@@ -21,14 +21,14 @@ Game::Game(const std::wstring& name, uint16_t width, uint16_t height, bool vSync
 {
 	Camera::Create();
 
-	XMVECTOR camera_pos = XMVectorSet(0, 0, -20, 1);
-	XMVECTOR camera_target = XMVectorSet(0, 0, 0, 1);
-	XMVECTOR camera_up = XMVectorSet(0, 1, 0, 0);
+	XMVECTOR camera_pos		= XMVectorSet(0, 0.0f, -20.0f, 1);
+	XMVECTOR camera_target	= XMVectorSet(0, 0, 0, 1);
+	XMVECTOR camera_up		= XMVectorSet(0, 1, 0, 1);
 
 	Camera& camera = Camera::Get();
 
 	camera.SetLookAt(camera_pos, camera_target, camera_up);
-	camera.SetProjection(45.0f, width / static_cast<float>(height), 0.1f, 100.0f);
+	camera.SetProjection(45.0f, width / static_cast<float>(height), 1.0f, 125.0f);
 }
 
 Game::~Game()

@@ -11,9 +11,9 @@ Camera::Camera()
 	  , aspect_ratio_(1.0f)
 	  , near_clip_(0.1f)
 	  , far_clip_(100.0f)
-	  , view_dirty_(true)
+	  , view_dirty_(false)
 	  , inverse_view_dirty_(true)
-	  , projection_dirty_(true)
+	  , projection_dirty_(false)
 	  , inverse_projection_dirty_(true)
 {
 	p_data_ = static_cast<AlignedData*>(_aligned_malloc(sizeof(AlignedData), 16));
@@ -65,6 +65,8 @@ XMMATRIX Camera::GetViewMatrix() const
 	if (view_dirty_)
 	{
 		UpdateViewMatrix();
+
+		view_dirty_ = false;
 	}
 	return p_data_->ViewMatrix;
 }
@@ -73,8 +75,7 @@ XMMATRIX Camera::GetInverseViewMatrix() const
 {
 	if (inverse_view_dirty_)
 	{
-		p_data_->InverseViewMatrix = XMMatrixInverse(nullptr, p_data_->ViewMatrix);
-		inverse_view_dirty_ = false;
+		UpdateInverseViewMatrix();
 	}
 
 	return p_data_->InverseViewMatrix;
@@ -131,6 +132,7 @@ void XM_CALLCONV Camera::SetTranslation(FXMVECTOR translation) const
 {
 	p_data_->Translation = translation;
 	view_dirty_ = true;
+	inverse_view_dirty_ = true;
 }
 
 XMVECTOR Camera::GetTranslation() const
@@ -180,7 +182,7 @@ void Camera::Rotate(FXMVECTOR quaternion) const
 
 void Camera::UpdateViewMatrix() const
 {
-	XMMATRIX rotation_matrix = XMMatrixTranspose(XMMatrixRotationQuaternion(p_data_->Rotation));
+	XMMATRIX rotation_matrix	= XMMatrixTranspose(XMMatrixRotationQuaternion(p_data_->Rotation));
 	XMMATRIX translation_matrix = XMMatrixTranslationFromVector(-(p_data_->Translation));
 
 	p_data_->ViewMatrix = translation_matrix * rotation_matrix;

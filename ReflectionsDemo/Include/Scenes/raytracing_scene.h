@@ -75,7 +75,7 @@ private:
 	
 	struct SceneConstantBuffer
 	{
-		DirectX::XMMATRIX ViewProj;
+		DirectX::XMMATRIX InverseViewProj;
 		DirectX::XMVECTOR CamPos;
 	};
 

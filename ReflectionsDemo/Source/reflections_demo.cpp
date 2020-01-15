@@ -35,7 +35,7 @@ enum TonemapMethod : uint32_t
 struct TonemapParameters
 {
 	TonemapParameters()
-		: TonemapMethod(kTmReinhard)
+		: TonemapMethod(kTmAcesFilmic)
 		  , Exposure(0.0f)
 		  , MaxLuminance(1.0f)
 		  , K(1.0f)
@@ -188,9 +188,9 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 	{
 		g_fps = frame_count / total_time;
 
-		char buffer[512];
-		sprintf_s(buffer, "FPS: %f\n", g_fps);
-		OutputDebugStringA(buffer);
+		//char buffer[512];
+		//sprintf_s(buffer, "FPS: %f\n", g_fps);
+		//OutputDebugStringA(buffer);
 
 		frame_count = 0;
 		total_time = 0.0;

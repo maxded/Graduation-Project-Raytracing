@@ -27,6 +27,8 @@ void AccelerationStructure::AllocateAccelerationStructureBuffer(D3D12_BUILD_RAYT
 
 	command_list.AllocateUAVBuffer(acceleration_structure_prebuild_info.ResultDataMaxSizeInBytes, &d3d12_resource_, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 	command_list.AllocateUAVBuffer(acceleration_structure_prebuild_info.ScratchDataSizeInBytes, &scratch_resource_, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	scratch_resource_->SetName(L"ScratchResource");
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE AccelerationStructure::GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srv_desc) const
