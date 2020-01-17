@@ -201,7 +201,6 @@ DescriptorAllocation Texture::CreateUnorderedAccessView(const D3D12_UNORDERED_AC
 	return uav;
 }
 
-
 D3D12_CPU_DESCRIPTOR_HANDLE Texture::GetShaderResourceView(const D3D12_SHADER_RESOURCE_VIEW_DESC* srv_desc) const
 {
 	std::size_t hash = 0;

@@ -14,75 +14,32 @@ public:
 	Scene();
 	virtual ~Scene();
 
-	/**
-	* Scene light properties for shaders
-	*/
-	struct SceneLightProperties
-	{
-		SceneLightProperties()
-			 : NumPointLights(0)
-			  , NumSpotLights(0)
-			  , NumDirectionalLights(0)
-		{
-		}
+	// Load glTF 2.0 scene from file.
+	void LoadFromFile(const std::string& filename, CommandList& command_list, bool load_basic_geometry = false);
 
-		uint32_t NumPointLights;
-		uint32_t NumSpotLights;
-		uint32_t NumDirectionalLights;
-	};
+	void LoadBasicGeometry(CommandList& command_list);
 
-	virtual void Load(const std::string& filename) = 0;
+	std::vector<Mesh>& GetMeshes() { return meshes_; }
+	
+	const std::vector<MeshInstance>& GetInstances() const { return mesh_instances_; }
 
-	/**
-	* Scene update for generic lighting setup
-	* Override in base class for custom behaviour
-	*/
-	virtual void Update(UpdateEventArgs& e);
+	const bool BasicGeometryLoaded() const { return basic_geometry_loaded_; }
+	const int GetTotalMeshes() const { return total_number_meshes_; }
 
-	virtual void PrepareRender(CommandList& command_list);
-
-	virtual void Render(CommandList& command_list);
-
-	virtual RenderTarget& GetRenderTarget() = 0;
-
-	void SetAnimateLights(bool animate) { animate_lights_ = animate; }
-
-	void ToggleAnimateLights() { animate_lights_ = !animate_lights_; }
+	std::unique_ptr<Mesh> CubeMesh;
+	std::unique_ptr<Mesh> SphereMesh;
+	std::unique_ptr<Mesh> ConeMesh;
+protected:
 
 	std::unique_ptr<Mesh> LoadBasicGeometry(std::string& filepath, CommandList& command_list);
 	
-	void Unload();
-
-protected:
-	// Load glTF 2.0 scene from file.
-	void LoadFromFile(const std::string& filename, CommandList& command_list);
-
 	std::string name_;
-	std::vector<PointLight> point_lights_;
-	std::vector<SpotLight> spot_lights_;
-	std::vector<DirectionalLight> directional_lights_;
-
-	bool animate_lights_;
-
 	std::vector<MeshInstance> mesh_instances_;
 
 	/**
 	* Data extracted from the glTF 2.0 file
 	*/
-	struct DocumentData
-	{
-		DocumentData()
-		{
-		}
-
-		std::vector<Mesh>		Meshes;
-		int TotalNumberMeshes = 0;
-	};
-
-	DocumentData	document_data_;
-
-	std::unique_ptr<Mesh> cube_mesh_;
-	std::unique_ptr<Mesh> sphere_mesh_;
-	std::unique_ptr<Mesh> cone_mesh_;
-private:
+	std::vector<Mesh>	meshes_;
+	int total_number_meshes_;
+	bool basic_geometry_loaded_;
 };

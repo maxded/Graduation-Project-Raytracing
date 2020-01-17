@@ -19,7 +19,7 @@ AccelerationStructure::~AccelerationStructure()
 
 void AccelerationStructure::AllocateAccelerationStructureBuffer(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs, CommandList& command_list)
 {
-	auto device			= NeelEngine::Get().GetDevice();
+	auto device	= NeelEngine::Get().GetDevice();
 	
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO acceleration_structure_prebuild_info = {};
 	device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &acceleration_structure_prebuild_info);

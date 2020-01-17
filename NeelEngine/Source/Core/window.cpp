@@ -385,7 +385,7 @@ const RenderTarget& Window::GetRenderTarget() const
 UINT Window::Present(const Texture& texture)
 {
 	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto command_list = command_queue->GetCommandList();
+	auto command_list  = command_queue->GetCommandList();
 
 	auto& back_buffer = back_buffer_textures_[current_back_buffer_index_];
 

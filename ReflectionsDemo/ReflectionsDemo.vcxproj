@@ -53,6 +53,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>DEBUG_;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
@@ -93,16 +94,11 @@ xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\reflections_demo.h" />
-    <ClInclude Include="Include\Scenes\default_scene.h" />
-    <ClInclude Include="Include\Scenes\raytracing_scene.h" />
-    <ClInclude Include="Include\Scenes\sponza_scene.h" />
+    <ClInclude Include="Include\root_parameters.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\reflections_demo.cpp" />
     <ClCompile Include="Source\main.cpp" />
-    <ClCompile Include="Source\Scenes\default_scene.cpp" />
-    <ClCompile Include="Source\Scenes\raytracing_scene.cpp" />
-    <ClCompile Include="Source\Scenes\sponza_scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\HDRtoSDR_PS.hlsl">
@@ -125,7 +121,7 @@ xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shaders\Raytracing.hlsl">
+    <FxCompile Include="Shaders\Raytracing_Shadows.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Library</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.3</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Library</ShaderType>

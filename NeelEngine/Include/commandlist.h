@@ -88,6 +88,17 @@ public:
 	*/
 	void AllocateUAVBuffer(UINT64 buffer_size, Resource& resource, D3D12_RESOURCE_STATES initial_state= D3D12_RESOURCE_STATE_COMMON);
 	void AllocateUAVBuffer(UINT64 buffer_size, ID3D12Resource** ppResource, D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COMMON);
+
+	/**
+	* Allocate UAV buffer
+	*/
+	D3D12_GPU_VIRTUAL_ADDRESS AllocateUploadBuffer(size_t size_in_bytes, const void* buffer_data);
+	
+	template <typename T>
+	D3D12_GPU_VIRTUAL_ADDRESS AllocateUploadBuffer(const T& data)
+	{
+		return AllocateUploadBuffer(sizeof(T), &data);
+	}
 	
 	/**
 	 * Flush any barriers that have been pushed to the command list.

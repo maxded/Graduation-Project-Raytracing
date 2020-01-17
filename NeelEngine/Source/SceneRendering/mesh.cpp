@@ -5,6 +5,8 @@
 #include "gltf_mesh_data.h"
 #include "camera.h"
 
+#include <algorithm>
+
 Mesh::Mesh()
 	: name_("unavailable")
 	  , base_transform_{XMMatrixIdentity()}

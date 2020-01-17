@@ -47,7 +47,9 @@ public:
 
 	std::vector<ShaderOptions> RequiredShaderOptions() const;
 
-	std::vector<SubMesh>& GetSubMeshes() { return sub_meshes_; };
+	std::vector<SubMesh>& GetSubMeshes() { return sub_meshes_; }
+
+	const DirectX::XMMATRIX& GetBaseTransform() const { return base_transform_; }
 
 	void SetEmissive(DirectX::XMFLOAT3 color);
 

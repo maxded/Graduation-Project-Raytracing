@@ -3,13 +3,12 @@
 #include "neel_engine.h"
 #include "commandqueue.h"
 #include "window.h"
-#include "material.h"
 #include "camera.h"
 #include "helpers.h"
-
-#include "sponza_scene.h"
-#include "default_scene.h"
-#include "raytracing_scene.h"
+#include "root_parameters.h"
+#include <DirectXColors.h>
+#include "CompiledShaders/Raytracing_Shadows.hlsl.h"
+#include "shader_table.h"
 
 using namespace Microsoft::WRL;
 using namespace DirectX;
@@ -23,6 +22,9 @@ using namespace DirectX;
 #endif
 
 #include <d3dcompiler.h>
+
+const wchar_t* ReflectionsDemo::c_raygen_shadow_pass_ = L"ShadowPassRaygenShader";
+const wchar_t* ReflectionsDemo::c_miss_shadow_pass_   = L"ShadowPassMissShader";
 
 enum TonemapMethod : uint32_t
 {
@@ -78,12 +80,25 @@ TonemapParameters g_tonemap_parameters;
 
 ReflectionsDemo::ReflectionsDemo(const std::wstring& name, int width, int height, bool v_sync)
 	: Game(name, width, height, v_sync)
-	  , shift_(false)
-	  , width_(width)
-	  , height_(height)
-	  , render_scale_(1.0f)
-	  , scissor_rect_(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
+	, shift_(false)
+	, width_(width)
+	, height_(height)
+	, render_scale_(1.0f)
+	, scissor_rect_(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
+	, animate_lights_(false)
+	, visualise_lights_(true)
 {
+	// Create camera.
+	Camera::Create();
+
+	XMVECTOR camera_pos = XMVectorSet(0, 0.0f, -20.0f, 1);
+	XMVECTOR camera_target = XMVectorSet(0, 0, 0, 1);
+	XMVECTOR camera_up = XMVectorSet(0, 1, 0, 1);
+
+	Camera& camera = Camera::Get();
+
+	camera.SetLookAt(camera_pos, camera_target, camera_up);
+	camera.SetProjection(45.0f, width / static_cast<float>(height), 0.01f, 125.0f);
 }
 
 ReflectionsDemo::~ReflectionsDemo()
@@ -93,28 +108,358 @@ ReflectionsDemo::~ReflectionsDemo()
 
 bool ReflectionsDemo::LoadContent()
 {
-	auto device = NeelEngine::Get().GetDevice();
-	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
-	auto command_list = command_queue->GetCommandList();
+	auto device			= NeelEngine::Get().GetDevice();
+	auto command_queue	= NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	auto command_list	= command_queue->GetCommandList();
 
-	current_scene_ = std::make_unique<RayTracingScene>();
-	current_scene_->Load("Assets/BasicGeometry/Cube.gltf");
+	// Load scene from gltf file.
+	scene_.LoadFromFile("Assets/Sponza/Sponza.gltf", *command_list, true);
 
-	// Create the SDR Root Signature
+	// Create the HDR rendertarget.
 	{
-		// Check root signature highest version support.
-		D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data = {};
+		DXGI_FORMAT hdr_format				= DXGI_FORMAT_R16G16B16A16_FLOAT;
+		DXGI_FORMAT depth_buffer_format		= DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+		DXGI_FORMAT shadow_buffer_format	= DXGI_FORMAT_R16_UINT;
+
+		// Create an off-screen render target with a single color buffer and a depth buffer.
+		int width  = NeelEngine::Get().GetWindow()->GetClientWidth();
+		int height = NeelEngine::Get().GetWindow()->GetClientHeight();
+
+		auto color_desc = CD3DX12_RESOURCE_DESC::Tex2D(hdr_format, width, height);
+		color_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+		D3D12_CLEAR_VALUE color_clear_value;
+		color_clear_value.Format = color_desc.Format;
+		color_clear_value.Color[0] = 0.4f;
+		color_clear_value.Color[1] = 0.6f;
+		color_clear_value.Color[2] = 0.9f;
+		color_clear_value.Color[3] = 1.0f;
+
+		Texture hdr_texture = Texture(color_desc, &color_clear_value,TextureUsage::RenderTarget,"HDR Texture");
+
+		// Create a depth buffer for the HDR render target.
+		auto depth_desc = CD3DX12_RESOURCE_DESC::Tex2D(depth_buffer_format, width, height);
+		depth_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+		D3D12_CLEAR_VALUE depth_clear_value;
+		depth_clear_value.Format = depth_desc.Format;
+		depth_clear_value.DepthStencil = { 1.0f, 0 };
+
+		Texture depth_texture = Texture(depth_desc, &depth_clear_value,TextureUsage::Depth, "Depth Render Target");
+
+		// Create a shadow buffer for the raytracing shadow pass.
+		auto shadow_desc = CD3DX12_RESOURCE_DESC::Tex2D(shadow_buffer_format, width, height);
+		shadow_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+		D3D12_CLEAR_VALUE shadow_clear_value;
+		shadow_clear_value.Format = shadow_desc.Format;
+		shadow_clear_value.Color[0] = 0.4f;
+		shadow_clear_value.Color[1] = 0.6f;
+		shadow_clear_value.Color[2] = 0.9f;
+		shadow_clear_value.Color[3] = 1.0f;
+
+		Texture shadow_texture = Texture(shadow_desc, &shadow_clear_value, TextureUsage::RenderTarget, "Shadow Render Target");
+
+		// Attach the HDR texture to the HDR render target.
+		hdr_render_target_.AttachTexture(AttachmentPoint::kColor0, hdr_texture);
+		hdr_render_target_.AttachTexture(AttachmentPoint::kDepthStencil, depth_texture);
+		hdr_render_target_.AttachTexture(AttachmentPoint::kColor1, shadow_texture);
+	}
+
+	// Check root signature highest version support.
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data = {};
+	feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &feature_data, sizeof(feature_data))))
+	{
 		feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-		if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &feature_data, sizeof(feature_data))))
+	}
+
+	// Create the HDR Root Signature.
+	{
+		// Allow input layout and deny unnecessary access to certain pipeline stages.
+		D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags =
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 3);
+
+		CD3DX12_ROOT_PARAMETER1 root_parameters[HDRRootSignatureParams::NumRootParameters];
+		root_parameters[HDRRootSignatureParams::Materials].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[HDRRootSignatureParams::MeshConstantBuffer].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
+		root_parameters[HDRRootSignatureParams::LightPropertiesCb].InitAsConstants(sizeof(SceneLightProperties) / 4, 2, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[HDRRootSignatureParams::PointLights].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[HDRRootSignatureParams::SpotLights].InitAsShaderResourceView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[HDRRootSignatureParams::DirectionalLights].InitAsShaderResourceView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[HDRRootSignatureParams::Textures].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
+
+		CD3DX12_STATIC_SAMPLER_DESC static_sampler
+		(
+			0, // shaderRegister
+			D3D12_FILTER_ANISOTROPIC, // filter
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressU
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressV
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressW
+			0.0f,	// mipLODBias
+			8		// maxAnisotropy
+		);
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
+		root_signature_description.Init_1_1(HDRRootSignatureParams::NumRootParameters, root_parameters, 1, &static_sampler, root_signature_flags);
+
+		hdr_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
+	}
+
+	// Create HDR pipeline state object with shader permutations.
+	{
+		// Setup the HDR pipeline State.
+		struct HDRPipelineStateStream
 		{
-			feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+			CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE PRootSignature;
+			CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT InputLayout;
+			CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER Rasterizer;
+			CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+			CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+			CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+			CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSVFormat;
+			CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+		} hdr_pipeline_state_stream;
+
+		std::vector<D3D12_INPUT_ELEMENT_DESC> input_layout =
+		{
+			{	"POSITION",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::vertex_slot_,		0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"NORMAL",		0, DXGI_FORMAT_R32G32B32_FLOAT,		Mesh::normal_slot_,		0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"TANGENT",		0, DXGI_FORMAT_R32G32B32A32_FLOAT,	Mesh::tangent_slot_,	0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{	"TEXCOORD",		0, DXGI_FORMAT_R32G32_FLOAT,		Mesh::texcoord0_slot_,	0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+		};
+
+		// Load the HDR vertex shader.
+		Microsoft::WRL::ComPtr<ID3DBlob> vs;
+		ThrowIfFailed(D3DReadFileToBlob(L"HDR_VS.cso", &vs));
+
+		hdr_pipeline_state_stream.PRootSignature = hdr_root_signature_.GetRootSignature().Get();
+		hdr_pipeline_state_stream.InputLayout = { &input_layout[0], static_cast<UINT>(input_layout.size()) };
+		hdr_pipeline_state_stream.Rasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);;
+		hdr_pipeline_state_stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		hdr_pipeline_state_stream.VS = CD3DX12_SHADER_BYTECODE(vs.Get());
+		hdr_pipeline_state_stream.DSVFormat = hdr_render_target_.GetDepthStencilFormat();
+		hdr_pipeline_state_stream.RTVFormats = hdr_render_target_.GetRenderTargetFormats();
+
+		Microsoft::WRL::ComPtr<ID3DBlob> pixel_blob = CompileShaderPerumutation("main", ShaderOptions::USE_AUTO_COLOR);
+		hdr_pipeline_state_stream.PS = CD3DX12_SHADER_BYTECODE(pixel_blob.Get());
+
+		D3D12_PIPELINE_STATE_STREAM_DESC hdr_pipeline_state_stream_desc = { sizeof(HDRPipelineStateStream), &hdr_pipeline_state_stream };
+		ThrowIfFailed(device->CreatePipelineState(&hdr_pipeline_state_stream_desc, IID_PPV_ARGS(&hdr_pipeline_state_map_[ShaderOptions::USE_AUTO_COLOR])));
+
+		// Compile shader permutations for all required options for meshes.
+		for (const auto& mesh : scene_.GetMeshes())
+		{
+			std::vector<ShaderOptions> required_options = mesh.RequiredShaderOptions();
+
+			for (const ShaderOptions options : required_options)
+			{
+				if (hdr_pipeline_state_map_[options] == nullptr)
+				{
+					Microsoft::WRL::ComPtr<ID3DBlob> ps_blob = CompileShaderPerumutation("main", options);
+					hdr_pipeline_state_stream.PS = CD3DX12_SHADER_BYTECODE(ps_blob.Get());
+
+					D3D12_PIPELINE_STATE_STREAM_DESC state_stream_desc = { sizeof(HDRPipelineStateStream), &hdr_pipeline_state_stream };
+					ThrowIfFailed(device->CreatePipelineState(&state_stream_desc, IID_PPV_ARGS(&hdr_pipeline_state_map_[options])));
+				}
+			}
+		}
+	}
+
+	// Create raytracing Root Signatures.
+	{
+		CD3DX12_DESCRIPTOR_RANGE1 uav_descriptor;
+		uav_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+
+		CD3DX12_DESCRIPTOR_RANGE1 srv_descriptor;
+		srv_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+		CD3DX12_ROOT_PARAMETER1 root_parameters[GlobalRootSignatureParams::NumRootParameters];
+		root_parameters[GlobalRootSignatureParams::RenderTarget].InitAsDescriptorTable(1, &uav_descriptor);
+		root_parameters[GlobalRootSignatureParams::SceneConstantBuffer].InitAsConstantBufferView(0);
+		root_parameters[GlobalRootSignatureParams::DepthMap].InitAsDescriptorTable(1, &srv_descriptor);
+		root_parameters[GlobalRootSignatureParams::AccelerationStructureSlot].InitAsShaderResourceView(0);
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
+		root_signature_description.Init_1_1(GlobalRootSignatureParams::NumRootParameters, root_parameters, 0, nullptr);
+
+		raytracing_global_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
+	}
+
+	// Create raytracing pipeline state object.
+	{
+		CD3DX12_STATE_OBJECT_DESC raytracing_pipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+
+		// DXIL library
+		// This contains the shaders and their entrypoints for the state object.
+		auto lib = raytracing_pipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)g_pRaytracing_Shadows, ARRAYSIZE((g_pRaytracing_Shadows)));
+		lib->SetDXILLibrary(&libdxil);
+
+		lib->DefineExport(c_raygen_shadow_pass_);
+		lib->DefineExport(c_miss_shadow_pass_);
+
+		// Shader config
+		// Defines the maximum sizes in bytes for the ray payload and attribute structure.
+		auto shader_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+		UINT payload_size = 4 * sizeof(float);   // float4 color
+		UINT attribute_size = 2 * sizeof(float); // float2 barycentrics
+		shader_config->Config(payload_size, attribute_size);
+
+		// Local Root Signature
+
+		// GLobal root signature
+		auto global_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+		global_root_signature->SetRootSignature(raytracing_global_root_signature_.GetRootSignature().Get());
+
+		// Pipeline config
+		auto pipeline_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+		pipeline_config->Config(1); // Max recusion of rays.
+
+#if _DEBUG
+		PrintStateObjectDesc(raytracing_pipeline);
+#endif
+
+		// Create state object
+		ThrowIfFailed(device->CreateStateObject(raytracing_pipeline, IID_PPV_ARGS(&shadow_pass_state_object_)));
+	}
+
+	// Create Acceleration Structures.
+	{
+		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descs(scene_.GetTotalMeshes());
+
+		int index = 0;
+		for (auto& geometry : scene_.GetMeshes())
+		{
+			// Upload geometry base transform.
+			XMFLOAT3X4 transform = {};
+			XMStoreFloat3x4(&transform, geometry.GetBaseTransform());
+			auto gpu_address = command_list->AllocateUploadBuffer(transform);
+			
+			for (auto& submesh : geometry.GetSubMeshes())
+			{
+				// Transition buffers to D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE for building acceleration structures.
+				command_list->TransitionBarrier(submesh.IBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+				command_list->TransitionBarrier(submesh.VBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+				geometry_descs[index].Type									= D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+				geometry_descs[index].Triangles.IndexBuffer					= submesh.IBuffer.GetIndexBufferView().BufferLocation;
+				geometry_descs[index].Triangles.IndexCount					= submesh.IBuffer.GetNumIndicies();
+				geometry_descs[index].Triangles.IndexFormat					= submesh.IBuffer.GetIndexBufferView().Format;
+				geometry_descs[index].Triangles.Transform3x4				= gpu_address;
+				geometry_descs[index].Triangles.VertexCount					= submesh.VBuffer.GetNumVertices();
+				geometry_descs[index].Triangles.VertexFormat				= DXGI_FORMAT_R32G32B32_FLOAT;
+				geometry_descs[index].Triangles.VertexBuffer.StartAddress	= submesh.VBuffer.GetVertexBufferViews()[0].BufferLocation;
+				geometry_descs[index].Triangles.VertexBuffer.StrideInBytes	= submesh.VBuffer.GetVertexBufferViews()[0].StrideInBytes;
+				geometry_descs[index].Flags									= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+				index++;
+			}
 		}
 
+		command_list->FlushResourceBarriers();
+
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS build_flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+
+		// Top level 
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC top_level_build_desc = {};
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& top_level_inputs = top_level_build_desc.Inputs;
+		top_level_inputs.DescsLayout		= D3D12_ELEMENTS_LAYOUT_ARRAY;
+		top_level_inputs.Flags				= build_flags;
+		top_level_inputs.NumDescs			= 1;
+		top_level_inputs.pGeometryDescs		= nullptr;
+		top_level_inputs.Type				= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+
+		// Bottom level
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottom_level_build_desc = {};
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& bottom_level_inputs = bottom_level_build_desc.Inputs;
+		bottom_level_inputs.DescsLayout		= D3D12_ELEMENTS_LAYOUT_ARRAY;
+		bottom_level_inputs.Flags			= build_flags;
+		bottom_level_inputs.NumDescs		= scene_.GetTotalMeshes();
+		bottom_level_inputs.pGeometryDescs	= geometry_descs.data();
+		bottom_level_inputs.Type			= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+
+		// Allocate space on GPU to build acceleration structures
+		bottom_level_acceleration_structure_.AllocateAccelerationStructureBuffer(bottom_level_inputs, *command_list);
+		top_level_acceleration_structure_.AllocateAccelerationStructureBuffer(top_level_inputs, *command_list);
+
+		// Create an instance desc for the bottom-level acceleration structure.
+		D3D12_RAYTRACING_INSTANCE_DESC instance_desc = {};
+		instance_desc.Transform[0][0] = instance_desc.Transform[1][1] = instance_desc.Transform[2][2] = 1;
+		instance_desc.InstanceMask = 1;
+		instance_desc.AccelerationStructure = bottom_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress();
+
+		auto gpu_adress = command_list->AllocateUploadBuffer(instance_desc);
+
+		{
+			bottom_level_build_desc.ScratchAccelerationStructureData = bottom_level_acceleration_structure_.GetScratchResource()->GetGPUVirtualAddress();
+			bottom_level_build_desc.DestAccelerationStructureData = bottom_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress();
+		}
+
+		{
+			top_level_build_desc.ScratchAccelerationStructureData = top_level_acceleration_structure_.GetScratchResource()->GetGPUVirtualAddress();
+			top_level_build_desc.DestAccelerationStructureData = top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress();
+			top_level_build_desc.Inputs.InstanceDescs = gpu_adress;
+		}
+
+		// Build ray tracing acceleration structures.
+		command_list->GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&bottom_level_build_desc, 0, nullptr);
+		command_list->UAVBarrier(bottom_level_acceleration_structure_, true);
+		command_list->GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&top_level_build_desc, 0, nullptr);
+	}
+
+	// Create raytracing Shader Tables.
+	{
+		void* raygen_shader_id;
+		void* miss_shader_id;
+
+		auto GetShaderidentifiers = [&](auto* state_object_properties)
+		{
+			raygen_shader_id	= state_object_properties->GetShaderIdentifier(c_raygen_shadow_pass_);
+			miss_shader_id		= state_object_properties->GetShaderIdentifier(c_miss_shadow_pass_);
+		};
+
+		UINT shader_id_size;
+		{
+			Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> state_object_properties;
+			ThrowIfFailed(shadow_pass_state_object_.As(&state_object_properties));
+			GetShaderidentifiers(state_object_properties.Get());
+			shader_id_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+		}
+
+		// RayGen Shader Table
+		{
+			UINT num_shader_records = 1;
+			UINT shader_record_size = shader_id_size;
+			ShaderTable raygen_shader_table(num_shader_records, shader_record_size, "RayGenShaderTable");
+			raygen_shader_table.push_back(ShaderRecord(raygen_shader_id, shader_id_size));
+
+			raygen_shader_table_ = raygen_shader_table.GetD3D12Resource();
+		}
+
+		// Miss Shader Table
+		{
+			UINT num_shader_records = 1;
+			UINT shader_record_size = shader_id_size;
+			ShaderTable miss_shader_table(num_shader_records, shader_record_size, "MissShaderTable");
+			miss_shader_table.push_back(ShaderRecord(miss_shader_id, shader_id_size));
+
+			miss_shader_table_ = miss_shader_table.GetD3D12Resource();
+		}
+	}
+	
+	// Create the SDR Root Signature.
+	{
 		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
-		CD3DX12_ROOT_PARAMETER1 root_parameters[2];
-		root_parameters[0].InitAsConstants(sizeof(TonemapParameters) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-		root_parameters[1].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
+		CD3DX12_ROOT_PARAMETER1 root_parameters[SDRRootSignatureParams::NumRootParameters];
+		root_parameters[SDRRootSignatureParams::TonemapProperties].InitAsConstants(sizeof(TonemapParameters) / 4, 0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[SDRRootSignatureParams::HDRTexture].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		CD3DX12_STATIC_SAMPLER_DESC linear_clamps_sampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
 			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
@@ -170,6 +515,7 @@ bool ReflectionsDemo::LoadContent()
 
 void ReflectionsDemo::UnloadContent()
 {
+	
 }
 
 static double g_fps = 0.0;
@@ -196,7 +542,101 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 		total_time = 0.0;
 	}
 
-	current_scene_->Update(e);
+	Camera& camera = Camera::Get();
+
+	XMMATRIX view_matrix = camera.GetViewMatrix();
+
+	// Update lights.
+	{
+		const int num_point_lights = 12;
+		const int num_spot_lights = 4;
+		const int num_directional_lights = 1;
+
+		static const XMVECTORF32 light_colors[] =
+		{
+			Colors::Red, Colors::Green, Colors::Blue, Colors::Orange, Colors::DarkTurquoise, Colors::Indigo, Colors::Violet,
+			Colors::Aqua, Colors::CadetBlue, Colors::GreenYellow, Colors::Lime, Colors::Azure
+		};
+
+		static float light_anim_time = 0.0f;
+		if (animate_lights_)
+		{
+			light_anim_time += static_cast<float>(e.ElapsedTime) * 0.1f * XM_PI;
+		}
+
+		const float radius = 3.5f;
+		const float offset = 2.0f * XM_PI / num_point_lights;
+		const float offset2 = offset + (offset / 2.0f);
+
+		// Setup the light buffers.
+		point_lights_.resize(num_point_lights);
+		for (int i = 0; i < num_point_lights; ++i)
+		{
+			PointLight& l = point_lights_[i];
+
+			l.PositionWS = {
+				static_cast<float>(std::sin(light_anim_time + offset * i)) * radius,
+				2.0f,
+				static_cast<float>(std::cos(light_anim_time + offset * i)) * radius,
+				1.0f
+			};
+			XMVECTOR position_ws = XMLoadFloat4(&l.PositionWS);
+			XMVECTOR position_vs = XMVector3TransformCoord(position_ws, view_matrix);
+			XMStoreFloat4(&l.PositionVS, position_vs);
+
+			l.Color = XMFLOAT4(light_colors[i]);
+			l.Intensity = 1.0f;
+			l.Attenuation = 0.0f;
+		}
+
+		spot_lights_.resize(num_spot_lights);
+		for (int i = 0; i < num_spot_lights; ++i)
+		{
+			SpotLight& l = spot_lights_[i];
+
+			l.PositionWS = {
+				static_cast<float>(std::sin(light_anim_time + offset * i + offset2)) * radius,
+				9.0f,
+				static_cast<float>(std::cos(light_anim_time + offset * i + offset2)) * radius,
+				1.0f
+			};
+			XMVECTOR position_ws = XMLoadFloat4(&l.PositionWS);
+			XMVECTOR position_vs = XMVector3TransformCoord(position_ws, view_matrix);
+			XMStoreFloat4(&l.PositionVS, position_vs);
+
+			XMVECTOR direction_ws = XMVector3Normalize(XMVectorSetW(XMVectorNegate(position_ws), 0));
+			XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
+			XMStoreFloat4(&l.DirectionWS, direction_ws);
+			XMStoreFloat4(&l.DirectionVS, direction_vs);
+
+			l.Color = XMFLOAT4(light_colors[num_point_lights + i]);
+			l.Intensity = 1.0f;
+			l.SpotAngle = XMConvertToRadians(45.0f);
+			l.Attenuation = 0.0f;
+		}
+
+		directional_lights_.resize(num_directional_lights);
+		for (int i = 0; i < num_directional_lights; ++i)
+		{
+			DirectionalLight& l = directional_lights_[i];
+
+			XMVECTOR direction_ws = { -0.57f, 0.57f, 0.57f, 0.0 };
+			XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
+
+			XMStoreFloat4(&l.DirectionWS, direction_ws);
+			XMStoreFloat4(&l.DirectionVS, direction_vs);
+
+			l.Color = XMFLOAT4(Colors::White);
+		}
+	}
+
+	// Update scene constants.
+	{
+		DirectX::XMMATRIX view_proj = camera.GetViewMatrix() * camera.GetProjectionMatrix();
+
+		scene_buffer_.InverseViewProj = DirectX::XMMatrixInverse(nullptr, view_proj);
+		scene_buffer_.CamPos = camera.GetTranslation();
+	}
 }
 
 void ReflectionsDemo::OnRender(RenderEventArgs& e)
@@ -206,23 +646,132 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 	auto command_queue = NeelEngine::Get().GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	auto command_list = command_queue->GetCommandList();
 
-	current_scene_->PrepareRender(*command_list);
+	// Raytracing shadow pass.
+/*	{
+		// Clear the shadow buffer.
+		FLOAT clear_color[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+		command_list->ClearTexture(hdr_render_target_.GetTexture(AttachmentPoint::kColor1), clear_color);
+		
+		// Bind the heaps, acceleration strucutre and dispatch rays.
+		D3D12_DISPATCH_RAYS_DESC dispatch_desc = {};
 
-	current_scene_->Render(*command_list);
+		dispatch_desc.MissShaderTable.StartAddress				= miss_shader_table_->GetGPUVirtualAddress();
+		dispatch_desc.MissShaderTable.SizeInBytes				= miss_shader_table_->GetDesc().Width;
+		dispatch_desc.MissShaderTable.StrideInBytes				= dispatch_desc.MissShaderTable.SizeInBytes;
+		dispatch_desc.RayGenerationShaderRecord.StartAddress	= raygen_shader_table_->GetGPUVirtualAddress();
+		dispatch_desc.RayGenerationShaderRecord.SizeInBytes		= raygen_shader_table_->GetDesc().Width;
+		dispatch_desc.Width		= width_;
+		dispatch_desc.Height	= height_;
+		dispatch_desc.Depth		= 1;
 
-	// Perform HDR -> SDR tonemapping directly to the Window's render target.
-	command_list->SetRenderTarget(p_window_->GetRenderTarget());
-	command_list->SetViewport(p_window_->GetRenderTarget().GetViewport());
-	command_list->SetScissorRect(scissor_rect_);
-	command_list->SetPipelineState(sdr_pipeline_state_);
-	command_list->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	command_list->SetGraphicsRootSignature(sdr_root_signature_);
-	command_list->SetGraphics32BitConstants(0, g_tonemap_parameters);
-	command_list->SetShaderResourceView(1, 0, current_scene_->GetRenderTarget().GetTexture(kColor0),
-	                                   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		command_list->SetComputeRootSignature(raytracing_global_root_signature_);
+		command_list->SetStateObject(shadow_pass_state_object_);
 
-	command_list->Draw(3);
+		command_list->SetUnorderedAccessView(GlobalRootSignatureParams::RenderTarget, 0, hdr_render_target_.GetTexture(AttachmentPoint::kColor1));
+		command_list->SetComputeDynamicConstantBuffer(GlobalRootSignatureParams::SceneConstantBuffer, scene_buffer_);
+		command_list->SetShaderResourceView(GlobalRootSignatureParams::DepthMap, 0, hdr_render_target_.GetTexture(AttachmentPoint::kDepthStencil));
+		command_list->SetComputeAccelerationStructure(GlobalRootSignatureParams::AccelerationStructureSlot, top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress());
 
+		command_list->DispatchRays(dispatch_desc);
+
+		// Make sure to finish writes to render target.
+		command_list->UAVBarrier(hdr_render_target_.GetTexture(AttachmentPoint::kColor0), true);
+	}
+	*/
+	
+	// Prepare HDR render pass.
+	{
+		// Clear the render targets.		
+		FLOAT clear_color[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+		command_list->ClearTexture(hdr_render_target_.GetTexture(AttachmentPoint::kColor0), clear_color);
+		command_list->ClearDepthStencilTexture(hdr_render_target_.GetTexture(AttachmentPoint::kDepthStencil),
+				D3D12_CLEAR_FLAG_DEPTH);
+		
+		command_list->SetRenderTarget(hdr_render_target_);
+		command_list->SetViewport(hdr_render_target_.GetViewport());
+		command_list->SetScissorRect(scissor_rect_);
+	
+		command_list->SetGraphicsRootSignature(hdr_root_signature_);
+	}
+
+	// HDR render pass.
+	{
+		RenderContext render_context
+		{
+			*command_list,
+			ShaderOptions::USE_AUTO_COLOR,
+			ShaderOptions::None,
+			hdr_pipeline_state_map_
+		};
+	
+		// Upload lights
+		SceneLightProperties light_props;
+		light_props.NumPointLights = static_cast<uint32_t>(point_lights_.size());
+		light_props.NumSpotLights = static_cast<uint32_t>(spot_lights_.size());
+		light_props.NumDirectionalLights = static_cast<uint32_t>(directional_lights_.size());
+
+		command_list->SetGraphics32BitConstants(HDRRootSignatureParams::LightPropertiesCb, light_props);
+		command_list->SetGraphicsDynamicStructuredBuffer(HDRRootSignatureParams::PointLights, point_lights_);
+		command_list->SetGraphicsDynamicStructuredBuffer(HDRRootSignatureParams::SpotLights, spot_lights_);
+		command_list->SetGraphicsDynamicStructuredBuffer(HDRRootSignatureParams::DirectionalLights, directional_lights_);
+
+		// Loop over all instances of meshes in the scene and render.
+		for (auto& instance : scene_.GetInstances())
+		{
+			Mesh& mesh = scene_.GetMeshes()[instance.MeshIndex];
+			mesh.SetBaseTransform(instance.Transform);
+			mesh.Render(render_context);
+		}
+
+#if defined(DEBUG_)
+		// Render light sources.
+		if (visualise_lights_ && scene_.BasicGeometryLoaded())
+		{
+			DirectX::XMMATRIX translation_matrix = DirectX::XMMatrixIdentity();
+			DirectX::XMMATRIX rotation_matrix = DirectX::XMMatrixIdentity();
+			DirectX::XMMATRIX scaling_matrix = DirectX::XMMatrixIdentity();
+
+			DirectX::XMMATRIX world_matrix = DirectX::XMMatrixIdentity();
+
+			// Render geometry for point light sources
+			for (const auto& l : point_lights_)
+			{
+				DirectX::XMVECTOR light_position = DirectX::XMLoadFloat4(&l.PositionWS);
+				DirectX::XMVECTOR light_scaling{ 0.1f, 0.1f, 0.1f };
+
+				translation_matrix	= DirectX::XMMatrixTranslationFromVector(light_position);
+				scaling_matrix		= DirectX::XMMatrixScalingFromVector(light_scaling);
+
+				world_matrix = scaling_matrix * rotation_matrix * translation_matrix;
+
+				scene_.SphereMesh->SetEmissive(DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z));
+
+				scene_.SphereMesh->SetWorldMatrix(world_matrix);
+				scene_.SphereMesh->Render(render_context);
+			}
+		}
+#endif
+	}
+
+	// Prepare HDR -> SDR render pass.
+	{
+		command_list->SetRenderTarget(p_window_->GetRenderTarget());
+		command_list->SetViewport(p_window_->GetRenderTarget().GetViewport());
+		command_list->SetScissorRect(scissor_rect_);
+		command_list->SetPipelineState(sdr_pipeline_state_);
+		command_list->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		command_list->SetGraphicsRootSignature(sdr_root_signature_);
+	}
+
+	// HDR -> SDR render pass. (tonemap directly into window's render target (backbuffer))
+	{
+		command_list->SetGraphics32BitConstants(0, g_tonemap_parameters);
+		command_list->SetShaderResourceView(1, 0, hdr_render_target_.GetTexture(AttachmentPoint::kColor0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+		command_list->Draw(3);
+	}
+
+	// Execute.
 	command_queue->ExecuteCommandList(command_list);
 
 	// Present
@@ -250,26 +799,15 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 		case KeyCode::V:
 			p_window_->ToggleVSync();
 			break;
-		case KeyCode::Space:
-			//animate_lights_ = !animate_lights_;
-			break;
+		case KeyCode::Space:	
+			animate_lights_ = !animate_lights_;
+			break;	
 		case KeyCode::ShiftKey:
 			shift_ = true;
 			break;
-		case KeyCode::D1:
-		{		
-			current_scene_->Unload();
-			current_scene_ = std::make_unique<SponzaScene>();
-			current_scene_->Load("Assets/Sponza/Sponza.gltf");
+		case KeyCode::L:
+			visualise_lights_ = !visualise_lights_;
 			break;
-		}
-		case KeyCode::D2:
-		{
-			current_scene_->Unload();
-			current_scene_ = std::make_unique<DefaultScene>();
-			current_scene_->Load("Assets/SciFiHelmet/SciFiHelmet.gltf");
-			break;
-		}
 		default:
 			break;
 	}
@@ -326,5 +864,5 @@ void ReflectionsDemo::RescaleHDRRenderTarget(float scale)
 	width = clamp<uint32_t>(width, 1, D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
 	height = clamp<uint32_t>(height, 1, D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
 
-	current_scene_->GetRenderTarget().Resize(width, height);
+	hdr_render_target_.Resize(width, height);
 }

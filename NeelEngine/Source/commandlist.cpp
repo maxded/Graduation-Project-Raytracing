@@ -79,7 +79,7 @@ void CommandList::UAVBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> resource, bo
 
 void CommandList::UAVBarrier(const Resource& resource, bool flush_barriers)
 {
-	UAVBarrier(resource.GetD3D12Resource());
+	UAVBarrier(resource.GetD3D12Resource(), flush_barriers);
 }
 
 void CommandList::AliasingBarrier(Microsoft::WRL::ComPtr<ID3D12Resource> before_resource,
@@ -131,6 +131,15 @@ void CommandList::AllocateUAVBuffer(UINT64 buffer_size, ID3D12Resource** ppResou
 
 	ResourceStateTracker::AddGlobalResourceState(*ppResource, initial_state);
 }
+
+D3D12_GPU_VIRTUAL_ADDRESS CommandList::AllocateUploadBuffer(size_t size_in_bytes, const void* buffer_data)
+{
+	auto heap_allocation = upload_buffer_->Allocate(size_in_bytes, size_in_bytes);
+	memcpy(heap_allocation.CPU, buffer_data, size_in_bytes);
+
+	return heap_allocation.GPU;
+}
+
 
 void CommandList::AliasingBarrier(const Resource& before_resource, const Resource& after_resource, bool flush_barriers)
 {

@@ -108,3 +108,4 @@ inline std::vector<std::string> GetShaderDefines(ShaderOptions options)
 
 	return defines;
 }
+
