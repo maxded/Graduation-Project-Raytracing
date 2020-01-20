@@ -32,7 +32,7 @@ namespace GlobalRootSignatureParams
 		RenderTarget = 0,
 		SceneConstantBuffer,
 		DepthMap,
-		AccelerationStructureSlot,
+		AccelerationStructure,
 		NumRootParameters
 	};
 }

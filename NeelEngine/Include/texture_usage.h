@@ -10,5 +10,6 @@ enum class TextureUsage
 	MetalRoughnessmap,
 	Emissivemap,
 	AmbientOcclusionmap,
-	RenderTarget,	// Texture is used as a render target.	
+	RenderTarget,	// Texture is used as a render target.
+	ShadowMap,
 };

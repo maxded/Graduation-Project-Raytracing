@@ -131,6 +131,8 @@ std::unique_ptr<Mesh> Scene::LoadBasicGeometry(std::string& filepath, CommandLis
 	
 	meshes_.push_back(m);
 
+	total_number_meshes_++;
+
 	return std::make_unique<Mesh>(meshes_.back());
 }
 

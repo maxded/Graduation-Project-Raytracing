@@ -14,6 +14,8 @@ Texture2D DepthMap								: register(t1);
 
 RWTexture2D<uint1> RenderTarget					: register(u0);
 
+SamplerState LinearClampSampler					: register(s0);
+
 struct ShadowPayload
 {
 	bool miss;
@@ -22,6 +24,20 @@ struct ShadowPayload
 [shader("raygeneration")]
 void ShadowPassRaygenShader()
 {
+	uint2 launchindex	= DispatchRaysIndex().xy;
+	uint2 launchdim		= DispatchRaysDimensions();
+	float2 pixelpos		= (lauchindex + 0.5f) / lauchdim * 2.0f - 1.0f;
+
+	const float depth = DepthMap.SampleLevel(LinearClampSampler, pixelpos, 0);
+
+	// Skip sky rays.
+	if (depth == 0.0)
+	{
+		RenderTarget[launchindex] = 0.0;
+		return;
+	}
+
+	// Compute position from depth buffer.
 
 }
 

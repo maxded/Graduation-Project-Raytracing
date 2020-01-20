@@ -59,6 +59,10 @@ private:
 
 	RenderTarget hdr_render_target_;
 
+	Texture shadow_texture_;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC depth_buffer_view_;
+
 	AccelerationStructure bottom_level_acceleration_structure_;
 	AccelerationStructure top_level_acceleration_structure_;
 

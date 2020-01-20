@@ -682,7 +682,7 @@ void CommandList::GenerateMipsUAV(Texture& texture, bool is_srgb)
 void CommandList::ClearDepthStencilTexture(const Texture& texture, D3D12_CLEAR_FLAGS clear_flags, float depth,
                                            uint8_t stencil)
 {
-	TransitionBarrier(texture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	TransitionBarrier(texture, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
 	d3d12_command_list_->ClearDepthStencilView(texture.GetDepthStencilView(), clear_flags, depth, stencil, 0, nullptr);
 
 	TrackResource(texture);

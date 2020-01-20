@@ -115,55 +115,71 @@ bool ReflectionsDemo::LoadContent()
 	// Load scene from gltf file.
 	scene_.LoadFromFile("Assets/Sponza/Sponza.gltf", *command_list, true);
 
-	// Create the HDR rendertarget.
+	// Create the render targets.
 	{
 		DXGI_FORMAT hdr_format				= DXGI_FORMAT_R16G16B16A16_FLOAT;
-		DXGI_FORMAT depth_buffer_format		= DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-		DXGI_FORMAT shadow_buffer_format	= DXGI_FORMAT_R16_UINT;
+		DXGI_FORMAT depth_buffer_format		= DXGI_FORMAT_D32_FLOAT;
+		DXGI_FORMAT shadow_buffer_format	= DXGI_FORMAT_R8_UINT;
 
 		// Create an off-screen render target with a single color buffer and a depth buffer.
 		int width  = NeelEngine::Get().GetWindow()->GetClientWidth();
 		int height = NeelEngine::Get().GetWindow()->GetClientHeight();
 
-		auto color_desc = CD3DX12_RESOURCE_DESC::Tex2D(hdr_format, width, height);
-		color_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		// HDR render target. R16G16B16A16_FLOAT.
+		{
+			auto color_desc = CD3DX12_RESOURCE_DESC::Tex2D(hdr_format, width, height);
+			color_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-		D3D12_CLEAR_VALUE color_clear_value;
-		color_clear_value.Format = color_desc.Format;
-		color_clear_value.Color[0] = 0.4f;
-		color_clear_value.Color[1] = 0.6f;
-		color_clear_value.Color[2] = 0.9f;
-		color_clear_value.Color[3] = 1.0f;
+			D3D12_CLEAR_VALUE color_clear_value;
+			color_clear_value.Format = color_desc.Format;
+			color_clear_value.Color[0] = 0.4f;
+			color_clear_value.Color[1] = 0.6f;
+			color_clear_value.Color[2] = 0.9f;
+			color_clear_value.Color[3] = 1.0f;
 
-		Texture hdr_texture = Texture(color_desc, &color_clear_value,TextureUsage::RenderTarget,"HDR Texture");
+			// Create render target texture.
+			Texture hdr_texture = Texture(color_desc, &color_clear_value, TextureUsage::RenderTarget, "HDR Texture");
 
-		// Create a depth buffer for the HDR render target.
-		auto depth_desc = CD3DX12_RESOURCE_DESC::Tex2D(depth_buffer_format, width, height);
-		depth_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+			// Attach.
+			hdr_render_target_.AttachTexture(AttachmentPoint::kColor0, hdr_texture);
+		}
 
-		D3D12_CLEAR_VALUE depth_clear_value;
-		depth_clear_value.Format = depth_desc.Format;
-		depth_clear_value.DepthStencil = { 1.0f, 0 };
+		// Depth render target. D32_FLOAT.
+		{
+			auto depth_desc = CD3DX12_RESOURCE_DESC::Tex2D(depth_buffer_format, width, height);
+			depth_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
-		Texture depth_texture = Texture(depth_desc, &depth_clear_value,TextureUsage::Depth, "Depth Render Target");
+			D3D12_CLEAR_VALUE depth_clear_value;
+			depth_clear_value.Format = depth_desc.Format;
+			depth_clear_value.DepthStencil = { 1.0f, 0 };
 
-		// Create a shadow buffer for the raytracing shadow pass.
-		auto shadow_desc = CD3DX12_RESOURCE_DESC::Tex2D(shadow_buffer_format, width, height);
-		shadow_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			// Create depth buffer render target texture.
+			Texture depth_texture = Texture(depth_desc, &depth_clear_value, TextureUsage::Depth, "Depth Render Target");
 
-		D3D12_CLEAR_VALUE shadow_clear_value;
-		shadow_clear_value.Format = shadow_desc.Format;
-		shadow_clear_value.Color[0] = 0.4f;
-		shadow_clear_value.Color[1] = 0.6f;
-		shadow_clear_value.Color[2] = 0.9f;
-		shadow_clear_value.Color[3] = 1.0f;
+			// Create a view for the depth buffer (SRV).
+			D3D12_SHADER_RESOURCE_VIEW_DESC view = {};
+			view.Format = DXGI_FORMAT_R32_FLOAT;
+			view.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			view.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			view.Texture2D.MipLevels = 1;
+			view.Texture2D.MostDetailedMip = 0;
+			view.Texture2D.PlaneSlice = 0;
 
-		Texture shadow_texture = Texture(shadow_desc, &shadow_clear_value, TextureUsage::RenderTarget, "Shadow Render Target");
+			depth_buffer_view_ = view;
 
-		// Attach the HDR texture to the HDR render target.
-		hdr_render_target_.AttachTexture(AttachmentPoint::kColor0, hdr_texture);
-		hdr_render_target_.AttachTexture(AttachmentPoint::kDepthStencil, depth_texture);
-		hdr_render_target_.AttachTexture(AttachmentPoint::kColor1, shadow_texture);
+			// Attach.
+			hdr_render_target_.AttachTexture(AttachmentPoint::kDepthStencil, depth_texture);			
+		}
+
+		// Shadow texture. R8_UINT.
+		{
+			// Create a shadow buffer for the raytracing shadow pass.
+			auto shadow_desc = CD3DX12_RESOURCE_DESC::Tex2D(shadow_buffer_format, width, height);
+			shadow_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+			// Create shadow buffer render target texture.
+			shadow_texture_ = Texture(shadow_desc,nullptr, TextureUsage::ShadowMap, "ShadowMap");
+		}		
 	}
 
 	// Check root signature highest version support.
@@ -283,10 +299,12 @@ bool ReflectionsDemo::LoadContent()
 		root_parameters[GlobalRootSignatureParams::RenderTarget].InitAsDescriptorTable(1, &uav_descriptor);
 		root_parameters[GlobalRootSignatureParams::SceneConstantBuffer].InitAsConstantBufferView(0);
 		root_parameters[GlobalRootSignatureParams::DepthMap].InitAsDescriptorTable(1, &srv_descriptor);
-		root_parameters[GlobalRootSignatureParams::AccelerationStructureSlot].InitAsShaderResourceView(0);
+		root_parameters[GlobalRootSignatureParams::AccelerationStructure].InitAsShaderResourceView(0);
+
+		CD3DX12_STATIC_SAMPLER_DESC linear_clamp_sampler(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(GlobalRootSignatureParams::NumRootParameters, root_parameters, 0, nullptr);
+		root_signature_description.Init_1_1(GlobalRootSignatureParams::NumRootParameters, root_parameters, 1, &linear_clamp_sampler);
 
 		raytracing_global_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
@@ -647,11 +665,7 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 	auto command_list = command_queue->GetCommandList();
 
 	// Raytracing shadow pass.
-/*	{
-		// Clear the shadow buffer.
-		FLOAT clear_color[] = { 0.4f, 0.6f, 0.9f, 1.0f };
-		command_list->ClearTexture(hdr_render_target_.GetTexture(AttachmentPoint::kColor1), clear_color);
-		
+	{	
 		// Bind the heaps, acceleration strucutre and dispatch rays.
 		D3D12_DISPATCH_RAYS_DESC dispatch_desc = {};
 
@@ -667,18 +681,24 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 		command_list->SetComputeRootSignature(raytracing_global_root_signature_);
 		command_list->SetStateObject(shadow_pass_state_object_);
 
-		command_list->SetUnorderedAccessView(GlobalRootSignatureParams::RenderTarget, 0, hdr_render_target_.GetTexture(AttachmentPoint::kColor1));
+		command_list->SetUnorderedAccessView(GlobalRootSignatureParams::RenderTarget, 0, shadow_texture_);
 		command_list->SetComputeDynamicConstantBuffer(GlobalRootSignatureParams::SceneConstantBuffer, scene_buffer_);
-		command_list->SetShaderResourceView(GlobalRootSignatureParams::DepthMap, 0, hdr_render_target_.GetTexture(AttachmentPoint::kDepthStencil));
-		command_list->SetComputeAccelerationStructure(GlobalRootSignatureParams::AccelerationStructureSlot, top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress());
+		command_list->SetShaderResourceView(
+			GlobalRootSignatureParams::DepthMap, 
+			0, 
+			hdr_render_target_.GetTexture(AttachmentPoint::kDepthStencil),
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, 
+			0, 
+			D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+			&depth_buffer_view_);
+		command_list->SetComputeAccelerationStructure(GlobalRootSignatureParams::AccelerationStructure, top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress());
 
 		command_list->DispatchRays(dispatch_desc);
 
 		// Make sure to finish writes to render target.
-		command_list->UAVBarrier(hdr_render_target_.GetTexture(AttachmentPoint::kColor0), true);
+		command_list->UAVBarrier(hdr_render_target_.GetTexture(AttachmentPoint::kColor1), true);
 	}
-	*/
-	
+
 	// Prepare HDR render pass.
 	{
 		// Clear the render targets.		
@@ -766,7 +786,7 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 	// HDR -> SDR render pass. (tonemap directly into window's render target (backbuffer))
 	{
 		command_list->SetGraphics32BitConstants(0, g_tonemap_parameters);
-		command_list->SetShaderResourceView(1, 0, hdr_render_target_.GetTexture(AttachmentPoint::kColor0), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		command_list->SetShaderResourceView(1, 0, hdr_render_target_.GetTexture(AttachmentPoint::kColor0));
 
 		command_list->Draw(3);
 	}
