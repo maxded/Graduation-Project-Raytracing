@@ -122,6 +122,7 @@ private:
 	{
 		DirectX::XMMATRIX InverseViewProj;
 		DirectX::XMVECTOR CamPos;
+		DirectX::XMFLOAT4 LightDirection;
 	};
 
 	SceneConstantBuffer scene_buffer_;

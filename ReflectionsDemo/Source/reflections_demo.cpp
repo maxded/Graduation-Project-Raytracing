@@ -119,7 +119,7 @@ bool ReflectionsDemo::LoadContent()
 	{
 		DXGI_FORMAT hdr_format				= DXGI_FORMAT_R16G16B16A16_FLOAT;
 		DXGI_FORMAT depth_buffer_format		= DXGI_FORMAT_D32_FLOAT;
-		DXGI_FORMAT shadow_buffer_format	= DXGI_FORMAT_R8_UINT;
+		DXGI_FORMAT shadow_buffer_format	= DXGI_FORMAT_R16G16B16A16_FLOAT;
 
 		// Create an off-screen render target with a single color buffer and a depth buffer.
 		int width  = NeelEngine::Get().GetWindow()->GetClientWidth();
@@ -652,8 +652,9 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 	{
 		DirectX::XMMATRIX view_proj = camera.GetViewMatrix() * camera.GetProjectionMatrix();
 
-		scene_buffer_.InverseViewProj = DirectX::XMMatrixInverse(nullptr, view_proj);
-		scene_buffer_.CamPos = camera.GetTranslation();
+		scene_buffer_.InverseViewProj	= DirectX::XMMatrixInverse(nullptr, view_proj);
+		scene_buffer_.CamPos			= camera.GetTranslation();
+		scene_buffer_.LightDirection	= directional_lights_[0].DirectionWS;
 	}
 }
 
