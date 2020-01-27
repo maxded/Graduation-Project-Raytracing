@@ -17,7 +17,7 @@ Game::Game(const std::wstring& name, uint16_t width, uint16_t height, bool vSync
 	  , up_(0)
 	  , down_(0)
 	  , pitch_(0)
-	  , yaw_(0)
+	  , yaw_(-90)
 {
 	
 }
@@ -55,15 +55,13 @@ void Game::OnUpdate(UpdateEventArgs& e)
 	Camera& camera = Camera::Get();
 
 	// Update the camera.
-	XMVECTOR camera_translate = XMVectorSet(right_ - left_, 0.0f, forward_ - backward_, 1.0f) * 8.0f * static_cast<
-		float>(e.ElapsedTime);
+	XMVECTOR camera_translate = XMVectorSet(right_ - left_, 0.0f, forward_ - backward_, 1.0f) * 8.0f * static_cast<float>(e.ElapsedTime);
 	XMVECTOR camera_pan = XMVectorSet(0.0f, up_ - down_, 0.0f, 1.0f) * 8.0f * static_cast<float>(e.ElapsedTime);
 
 	camera.Translate(camera_translate, Space::kLocal);
 	camera.Translate(camera_pan, Space::kLocal);
 
-	XMVECTOR camera_rotation = XMQuaternionRotationRollPitchYaw(XMConvertToRadians(pitch_), XMConvertToRadians(yaw_),
-	                                                           0.0f);
+	XMVECTOR camera_rotation = XMQuaternionRotationRollPitchYaw(XMConvertToRadians(pitch_), XMConvertToRadians(yaw_), 0.0f);
 	camera.SetRotation(camera_rotation);
 }
 

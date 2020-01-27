@@ -63,6 +63,38 @@ Texture::~Texture()
 {
 }
 
+D3D12_RENDER_PASS_BEGINNING_ACCESS Texture::GetBeginningAccess() const
+{
+	if (texture_usage_ == TextureUsage::RenderTarget || texture_usage_ == TextureUsage::Depth)
+		return render_pass_beginning_access_;
+	else
+		throw std::exception("SetBeginningAccess: Invalid texture usage.");
+}
+
+void Texture::SetBeginningAccess(D3D12_RENDER_PASS_BEGINNING_ACCESS beginning_access)
+{
+	if (texture_usage_ == TextureUsage::RenderTarget || texture_usage_ == TextureUsage::Depth)
+		render_pass_beginning_access_ = beginning_access;
+	else
+		throw std::exception("SetBeginningAccess: Invalid texture usage.");
+}
+
+D3D12_RENDER_PASS_ENDING_ACCESS Texture::GetEndingAccess() const
+{
+	if (texture_usage_ == TextureUsage::RenderTarget || texture_usage_ == TextureUsage::Depth)
+		return render_pass_ending_access_;
+	else
+		throw std::exception("SetBeginningAccess: Invalid texture usage.");
+}
+
+void Texture::SetEndingAccess(D3D12_RENDER_PASS_ENDING_ACCESS ending_access)
+{
+	if (texture_usage_ == TextureUsage::RenderTarget || texture_usage_ == TextureUsage::Depth)
+		render_pass_ending_access_ = ending_access;
+	else
+		throw std::exception("SetBeginningAccess: Invalid texture usage.");
+}
+
 void Texture::Resize(uint32_t width, uint32_t height, uint32_t depth_or_array_size)
 {
 	// Resource can't be resized if it was never created in the first place.
@@ -162,12 +194,39 @@ void Texture::CreateViews()
 		{
 			render_target_view_ = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 			device->CreateRenderTargetView(d3d12_resource_.Get(), nullptr, render_target_view_.GetDescriptorHandle());
+
+			// Set default render pass beginning and ending access.
+			const float clear_color[]{ 0.4f, 0.6f, 0.9f, 1.0f };
+			CD3DX12_CLEAR_VALUE clear_value{ desc.Format, clear_color };
+			
+
+
+			D3D12_RENDER_PASS_BEGINNING_ACCESS beginning_access { D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR, { clear_value } };
+			D3D12_RENDER_PASS_ENDING_ACCESS ending_access{ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE, {} };
+
+			render_pass_beginning_access_ = beginning_access;
+			render_pass_ending_access_	  = ending_access;
+
+			texture_usage_ = TextureUsage::RenderTarget;
 		}
 		if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0 &&
 			CheckDSVSupport())
 		{
 			depth_stencil_view_ = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 			device->CreateDepthStencilView(d3d12_resource_.Get(), nullptr, depth_stencil_view_.GetDescriptorHandle());
+
+			// Set default render pass beginning and ending access.
+			D3D12_CLEAR_VALUE clear_value{};
+			clear_value.Format = desc.Format;
+			clear_value.DepthStencil = { 1.0f, 0 };
+	
+			D3D12_RENDER_PASS_BEGINNING_ACCESS beginning_access { D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR, {clear_value} };
+			D3D12_RENDER_PASS_ENDING_ACCESS ending_access{ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE, {} };
+
+			render_pass_beginning_access_ = beginning_access;
+			render_pass_ending_access_	  = ending_access;
+
+			texture_usage_ = TextureUsage::Depth;
 		}
 	}
 

@@ -48,18 +48,29 @@ protected:
 
 	void OnResize(ResizeEventArgs& e) override;
 
-	void RescaleHDRRenderTarget(float scale);
+	void RescaleRenderTargets(float scale);
 
 private:
 	Scene scene_;
 
-	RootSignature hdr_root_signature_;
-	RootSignature raytracing_global_root_signature_;
-	RootSignature sdr_root_signature_;
+	RenderTarget geometry_pass_render_target_;
+	RenderTarget rt_shadows_pass_render_target_;
+	RenderTarget light_accumulation_pass_render_target_;
 
-	RenderTarget hdr_render_target_;
+	RootSignature geometry_pass_root_signature_;
+	RootSignature rt_shadows_pass_global_root_signature_;
+	RootSignature light_accumulation_pass_root_signature_;
+	RootSignature composite_pass_root_signature_;
 
 	Texture shadow_texture_;
+
+	// Map containing all different pipeline states for each mesh with different shader options (permutations).
+	std::unordered_map<ShaderOptions, Microsoft::WRL::ComPtr<ID3D12PipelineState>> geometry_pass_pipeline_state_map_;
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> light_accumulation_pass_pipeline_state_;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> composite_pass_pipeline_state_;
+
+	const Texture* current_display_texture_;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC depth_buffer_view_;
 
@@ -74,11 +85,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> raygen_shader_table_;
 
 	Microsoft::WRL::ComPtr<ID3D12StateObject> shadow_pass_state_object_;
-
-	// Map containing all different pipeline states for each mesh with different shader options (permutations).
-	std::unordered_map<ShaderOptions, Microsoft::WRL::ComPtr<ID3D12PipelineState>> hdr_pipeline_state_map_;
-	
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> sdr_pipeline_state_;
 
 	D3D12_RECT scissor_rect_;
 
@@ -120,10 +126,19 @@ private:
 	*/
 	struct SceneConstantBuffer
 	{
+		DirectX::XMMATRIX InverseView;
+		DirectX::XMMATRIX InverseProj;
 		DirectX::XMMATRIX InverseViewProj;
 		DirectX::XMVECTOR CamPos;
 		DirectX::XMFLOAT4 LightDirection;
 	};
 
+	struct LightAccumulationSceneData
+	{
+		DirectX::XMMATRIX InverseViewProj;
+		DirectX::XMVECTOR CamPos;
+	};
+
 	SceneConstantBuffer scene_buffer_;
+	LightAccumulationSceneData light_accumulation_scene_data_;
 };

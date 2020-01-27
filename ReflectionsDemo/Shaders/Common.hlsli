@@ -1,100 +1,3 @@
-struct MeshConstantData
-{
-	float4x4 ModelMatrix;
-	//----------------------------------- (64 byte boundary)
-	float4x4 ModelViewMatrix;
-	//----------------------------------- (64 byte boundary)
-	float4x4 InverseTransposeModelMatrix;
-	//----------------------------------- (64 byte boundary)
-	float4x4 ModelViewProjectionMatrix;
-	//----------------------------------- (64 byte boundary)
-	float4 CameraPosition;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              64 * 4 + 16 = 272 bytes
-};
-
-struct MaterialData
-{
-	float4 MeshAutoColor;
-	//----------------------------------- (16 byte boundary)
-	float4 BaseColorFactor;
-	//----------------------------------- (16 byte boundary)
-	float NormalScale;
-	float RoughnessFactor;
-	float MetallicFactor;
-	float AoStrength;
-	//----------------------------------- (16 byte boundary)
-	float3 EmissiveFactor;
-	float  Padding;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 4 = 64 bytes 
-};
-
-struct PointLight
-{
-	float4 PositionWS; // Light position in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 PositionVS; // Light position in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	float       Intensity;
-	float       Attenuation;
-	float2      Padding;                // Pad to 16 bytes
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 4 = 64 bytes
-};
-
-struct SpotLight
-{
-	float4 PositionWS; // Light position in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 PositionVS; // Light position in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionWS; // Light direction in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionVS; // Light direction in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	float       Intensity;
-	float       SpotAngle;
-	float       Attenuation;
-	float       Padding;                // Pad to 16 bytes.
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 6 = 96 bytes
-};
-
-struct DirectionalLight
-{
-	float4 DirectionWS; // Light direction in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionVS; // Light direction in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 3 = 48 bytes 
-};
-
-struct LightProperties
-{
-	uint NumPointLights;
-	uint NumSpotLights;
-	uint NumDirectionalLights;
-};
-
-ConstantBuffer<MaterialData>			Material			: register(b0);
-ConstantBuffer<MeshConstantData>		MeshCB				: register(b1);
-ConstantBuffer<LightProperties>			LightPropertiesCB	: register(b2);
-
-StructuredBuffer<PointLight>			PointLights			: register(t0);
-StructuredBuffer<SpotLight>				SpotLights			: register(t1);
-StructuredBuffer<DirectionalLight>		DirectionalLights	: register(t2);
-
-Texture2D Textures[5]				: register(t3);
-
-SamplerState LinearRepeatSampler    : register(s0);
-
 static const float M_PI = 3.141592653589793f;
 
 float3 LinearToSRGB(float3 x)
@@ -113,6 +16,11 @@ float4 SRGBtoLINEAR(float4 srgbColor)
 #else
 	return srgbColor;
 #endif
+}
+
+float Attenuation(float light_range, float d)
+{
+	return 1.0f - smoothstep(light_range * 0.75f, light_range, d);
 }
 
 //---------------------------------------------------------------------//

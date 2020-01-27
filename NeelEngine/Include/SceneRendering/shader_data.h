@@ -9,7 +9,7 @@ struct PointLight
 		  , PositionVS(0.0f, 0.0f, 0.0f, 1.0f)
 		  , Color(1.0f, 1.0f, 1.0f, 1.0f)
 		  , Intensity(1.0f)
-		  , Attenuation(0.0f)
+		  , Range(0.0f)
 		  , Padding{0.0f, 0.0f}
 	{}
 
@@ -20,7 +20,7 @@ struct PointLight
 	DirectX::XMFLOAT4 Color;
 	//----------------------------------- (16 byte boundary)
 	float Intensity;
-	float Attenuation;
+	float Range;
 	float Padding[2]; // Pad to 16 bytes.
 	//----------------------------------- (16 byte boundary)
 	// Total:                              16 * 4 = 64 bytes

@@ -378,6 +378,11 @@ void CommandList::LoadTextureFromFile(Texture& texture, const std::string& filen
 		{
 			metadata.format = MakeSRGB(metadata.format);
 		}
+		// We need high precision normals for raytracing.
+		else if(texture_usage == TextureUsage::Normalmap)
+		{
+			//metadata.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		}
 
 		D3D12_RESOURCE_DESC texture_desc = {};
 		switch (metadata.dimension)
@@ -452,7 +457,7 @@ void CommandList::LoadTextureFromFile(Texture& texture, const std::string& filen
 
 void CommandList::ClearTexture(const Texture& texture, const float clear_color[4])
 {
-	TransitionBarrier(texture, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	TransitionBarrier(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
 	d3d12_command_list_->ClearRenderTargetView(texture.GetRenderTargetView(), clear_color, 0, nullptr);
 
 	TrackResource(texture);
@@ -653,7 +658,7 @@ void CommandList::GenerateMipsUAV(Texture& texture, bool is_srgb)
 
 		SetCompute32BitConstants(generatemips::kGenerateMipsCb, generate_mips_cb);
 
-		SetShaderResourceView(generatemips::kSrcMip, 0, texture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, src_mip, 1, &srv_desc);
+		SetShaderResourceView(generatemips::kSrcMip, 0, texture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, &srv_desc, src_mip, 1);
 
 		for (uint32_t mip = 0; mip < mip_count; ++mip)
 		{
@@ -735,8 +740,7 @@ void CommandList::SetGraphicsDynamicConstantBuffer(uint32_t root_parameter_index
 void CommandList::SetGraphics32BitConstants(uint32_t root_parameter_index, uint32_t num_constants,
                                             const void* constants)
 {
-	d3d12_command_list_->SetGraphicsRoot32BitConstants(root_parameter_index, num_constants, constants, 0);
-}
+	d3d12_command_list_->SetGraphicsRoot32BitConstants(root_parameter_index, num_constants, constants, 0);}
 
 void CommandList::SetComputeDynamicConstantBuffer(uint32_t root_parameter_index, size_t size_in_bytes,
 	const void* buffer_data)
@@ -756,6 +760,17 @@ void CommandList::SetCompute32BitConstants(uint32_t root_parameter_index, uint32
 void CommandList::SetComputeAccelerationStructure(uint32_t root_parameter_index, D3D12_GPU_VIRTUAL_ADDRESS address)
 {
 	d3d12_command_list_->SetComputeRootShaderResourceView(root_parameter_index, address);
+}
+
+void CommandList::SetComputeDynamicStructuredBuffer(uint32_t slot, size_t num_elements, size_t element_size, const void* buffer_data)
+{
+	size_t buffer_size = num_elements * element_size;
+
+	auto heap_allocation = upload_buffer_->Allocate(buffer_size, element_size);
+
+	memcpy(heap_allocation.CPU, buffer_data, buffer_size);
+
+	d3d12_command_list_->SetComputeRootShaderResourceView(slot, heap_allocation.GPU);
 }
 
 void CommandList::SetVertexBuffer(uint32_t slot, const VertexBuffer& vertex_buffer)
@@ -900,11 +915,12 @@ void CommandList::SetComputeRootSignature(const RootSignature& rootSignature)
 
 void CommandList::SetShaderResourceView(uint32_t root_parameter_index,
                                         uint32_t descriptor_offset,
-                                        const Resource& resource,
+                                        const Resource& resource,										
                                         D3D12_RESOURCE_STATES state_after,
+										const D3D12_SHADER_RESOURCE_VIEW_DESC* srv,
                                         UINT first_subresource,
-                                        UINT num_subresources,
-                                        const D3D12_SHADER_RESOURCE_VIEW_DESC* srv)
+                                        UINT num_subresources
+                                       )
 {
 	if (num_subresources < D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
 	{
@@ -948,6 +964,56 @@ void CommandList::SetUnorderedAccessView(uint32_t root_parameter_index,
 		root_parameter_index, descrptor_offset, 1, resource.GetUnorderedAccessView(uav));
 
 	TrackResource(resource);
+}
+
+void CommandList::BeginRenderPass(const RenderTarget& render_target, D3D12_RENDER_PASS_FLAGS flags)
+{
+	std::vector<D3D12_RENDER_PASS_RENDER_TARGET_DESC> render_target_descriptors;
+	render_target_descriptors.reserve(AttachmentPoint::kNumAttachmentPoints);
+
+	const auto& textures = render_target.GetTextures();
+
+	// Bind color targets (max of 8 render targets can be bound to the rendering pipeline.
+	for (int i = 0; i < 8; ++i)
+	{
+		auto& texture = textures[i];
+
+		if (texture.IsValid())
+		{
+			TransitionBarrier(texture, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			render_target_descriptors.push_back({ texture.GetRenderTargetView(), texture.GetBeginningAccess(), texture.GetEndingAccess() });
+
+			TrackResource(texture);
+		}
+	}
+
+	const auto& depth_texture = render_target.GetTexture(AttachmentPoint::kDepthStencil);
+	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depth_stencil_descriptor {};
+	if (depth_texture.GetD3D12Resource())
+	{
+		TransitionBarrier(depth_texture, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+		// Depth and stencil beginning and ending access' are, currently, always the same.
+		D3D12_RENDER_PASS_DEPTH_STENCIL_DESC desc{
+			depth_texture.GetDepthStencilView(),
+			depth_texture.GetBeginningAccess(),
+		depth_texture.GetBeginningAccess(),
+		depth_texture.GetEndingAccess(),
+		depth_texture.GetEndingAccess() };
+
+		depth_stencil_descriptor = desc;
+
+		TrackResource(depth_texture);
+	}
+	
+	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* p_dsv = depth_stencil_descriptor.cpuDescriptor.ptr != 0 ? &depth_stencil_descriptor : nullptr;
+	
+	d3d12_command_list_->BeginRenderPass(static_cast<UINT>(render_target_descriptors.size()), render_target_descriptors.data(), p_dsv, flags);
+}
+
+void CommandList::EndRenderPass()
+{
+	d3d12_command_list_->EndRenderPass();
 }
 
 

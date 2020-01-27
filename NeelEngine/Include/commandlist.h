@@ -196,8 +196,6 @@ public:
 	*/
 	void GenerateMips(Texture& texture);
 
-
-	
 	/**
 	 * Clear depth/stencil texture.
 	 */
@@ -260,6 +258,19 @@ public:
 
 	void SetComputeAccelerationStructure(uint32_t root_parameter_index, D3D12_GPU_VIRTUAL_ADDRESS address);
 
+	/**
+	* Set dynamic structured buffer contents.
+	*/
+	void SetComputeDynamicStructuredBuffer(uint32_t slot, size_t num_elements, size_t element_size,
+		const void* buffer_data);
+
+	template <typename T>
+	void SetComputeDynamicStructuredBuffer(uint32_t slot, const std::vector<T>& buffer_data)
+	{
+		SetComputeDynamicStructuredBuffer(slot, buffer_data.size(), sizeof(T), buffer_data.data());
+	}
+
+	
 	/**
 	 * Set the vertex buffer to the rendering pipeline.
 	 */
@@ -344,9 +355,9 @@ public:
 		const Resource& resource,
 		D3D12_RESOURCE_STATES state_after = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
 			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		const D3D12_SHADER_RESOURCE_VIEW_DESC* srv = nullptr,
 		UINT first_subresource = 0,
-		UINT num_subresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-		const D3D12_SHADER_RESOURCE_VIEW_DESC* srv = nullptr
+		UINT num_subresources = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES	
 	);
 
 	/**
@@ -362,6 +373,16 @@ public:
 		const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav = nullptr
 	);
 
+	/**
+	* Begin render pass.
+	*/
+	void BeginRenderPass(const RenderTarget& render_target, D3D12_RENDER_PASS_FLAGS flags = D3D12_RENDER_PASS_FLAG_NONE);
+
+	/**
+	* End render pass.
+	*/
+	void EndRenderPass();
+	
 	/**
 	 * Set the render targets for the graphics rendering pipeline.
 	 */

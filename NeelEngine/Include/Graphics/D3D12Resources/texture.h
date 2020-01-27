@@ -38,6 +38,19 @@ public:
 		texture_usage_ = texture_usage;
 	}
 
+	D3D12_RENDER_PASS_BEGINNING_ACCESS GetBeginningAccess() const;
+	/**
+	* Set the beginning access state of the texture for the render pass. (Only use when texture usage == render target).
+	*/	
+	void SetBeginningAccess(D3D12_RENDER_PASS_BEGINNING_ACCESS beginning_access);
+
+
+	D3D12_RENDER_PASS_ENDING_ACCESS GetEndingAccess() const;
+	/**
+	* Set the ending access state of the texture for the render pass. (Only use when texture usage == render target).
+	*/
+	void SetEndingAccess(D3D12_RENDER_PASS_ENDING_ACCESS ending_access);
+
 	/**
 	 * Resize the texture.
 	 */
@@ -122,6 +135,9 @@ private:
 	DescriptorAllocation depth_stencil_view_;
 
 	TextureUsage texture_usage_;
+
+	D3D12_RENDER_PASS_BEGINNING_ACCESS	render_pass_beginning_access_;
+	D3D12_RENDER_PASS_ENDING_ACCESS		render_pass_ending_access_;
 
 	std::string filename_;
 };

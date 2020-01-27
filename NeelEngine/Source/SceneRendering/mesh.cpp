@@ -227,11 +227,11 @@ void Mesh::Render(RenderContext& render_context)
 		render_context.CommandList.SetGraphicsDynamicConstantBuffer(0, submesh.Material.GetMaterialData());
 
 		// Bind PBR textures to pipeline for this submesh.
-		render_context.CommandList.SetShaderResourceView(6, 0, submesh.Material.Albedo(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(6, 1, submesh.Material.Normal(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(6, 2, submesh.Material.MetalRoughness(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(6, 3, submesh.Material.AmbientOcclusion(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(6, 4, submesh.Material.Emissive(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(2, 0, submesh.Material.Albedo(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(2, 1, submesh.Material.Normal(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(2, 2, submesh.Material.MetalRoughness(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(2, 3, submesh.Material.AmbientOcclusion(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		render_context.CommandList.SetShaderResourceView(2, 4, submesh.Material.Emissive(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			
 		render_context.CommandList.SetPrimitiveTopology(submesh.Topology);
 		render_context.CommandList.SetVertexBuffer(0, submesh.VBuffer);

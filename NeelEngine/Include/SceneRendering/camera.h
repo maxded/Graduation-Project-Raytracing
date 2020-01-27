@@ -54,6 +54,16 @@ public:
 	float GetFoV() const;
 
 	/**
+	* Get the near clip of the projection frustum.
+	*/
+	float GetNearClip() const { return near_clip_; };
+
+	/**
+	* Get the near clip of the projection frustum.
+	*/
+	float GetFarClip() const { return far_clip_; };
+
+	/**
 	 * Set the camera's position in world-space.
 	 */
 	void XM_CALLCONV SetTranslation(DirectX::FXMVECTOR translation) const;

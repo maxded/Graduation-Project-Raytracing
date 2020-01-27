@@ -382,7 +382,7 @@ inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShaderPerumutation(std::string co
 
 	shader_defines.emplace_back(D3D_SHADER_MACRO{ nullptr, nullptr });
 
-	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"Shaders/HDR_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
+	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"Shaders/GeometryPass_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
 
 	return permutated_pixel_shader;
 }
