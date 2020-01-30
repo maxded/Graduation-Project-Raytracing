@@ -1,11 +1,13 @@
 *.db
 *.opendb
+*.cso
 NeelEngine/Intermediate/
 NeelEngine/Library/
 DirectXTex/Intermediate/
 DirectXTex/Library/
 ReflectionsDemo/Intermediate/
 ReflectionsDemo/Executable/
+ReflectionsDemo/EngineShaders/
 *.sdf
 *.user
 .vs/

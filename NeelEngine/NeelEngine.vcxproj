@@ -61,10 +61,10 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
-      <ObjectFileOutput>$(SolutionDir)ReflectionsDemo\Executable\$(Platform)\$(Configuration)\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(ProjectDir)EngineShaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy /y /e /i "$(ProjectDir)EngineShaders" "$(SolutionDir)ReflectionsDemo\Executable\$(Platform)\$(Configuration)\EngineShaders"</Command>
+      <Command>xcopy /y /e /i "$(ProjectDir)EngineShaders" "$(SolutionDir)ReflectionsDemo\EngineShaders"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -85,10 +85,10 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
-      <ObjectFileOutput>$(SolutionDir)ReflectionsDemo\Executable\$(Platform)\$(Configuration)\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(ProjectDir)EngineShaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy /y /e /i "$(ProjectDir)EngineShaders" "$(SolutionDir)ReflectionsDemo\Executable\$(Platform)\$(Configuration)\EngineShaders"</Command>
+      <Command>xcopy /y /e /i "$(ProjectDir)EngineShaders" "$(SolutionDir)ReflectionsDemo\EngineShaders"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

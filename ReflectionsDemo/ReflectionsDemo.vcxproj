@@ -58,15 +58,16 @@
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
       <AdditionalOptions />
-      <ObjectFileOutput>$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(ProjectDir)Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>xcopy /y /i /e "$(ProjectDir)Assets" "$(OutDir)Assets"
+xcopy /y /i /e "$(ProjectDir)Shaders" "$(OutDir)Shaders"
+xcopy /y /i /e "$(ProjectDir)EngineShaders" "$(OutDir)EngineShaders"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>xcopy /y /i /e "$(ProjectDir)Assets" "$(OutDir)Assets"
-xcopy /y /i /e "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -85,11 +86,12 @@ xcopy /y /i /e "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
     </Link>
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
-      <ObjectFileOutput>$(OutDir)%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>$(ProjectDir)Shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <PostBuildEvent>
-      <Command>xcopy /y /e /i "$(ProjectDir)Assets" "$(OutDir)Assets"
-xcopy /y /e /i "$(ProjectDir)Shaders" "$(OutDir)Shaders"</Command>
+      <Command>xcopy /y /i /e "$(ProjectDir)Assets" "$(OutDir)Assets"
+xcopy /y /i /e "$(ProjectDir)Shaders" "$(OutDir)Shaders"
+xcopy /y /i /e "$(ProjectDir)EngineShaders" "$(OutDir)EngineShaders"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

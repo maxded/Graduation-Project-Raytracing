@@ -172,8 +172,8 @@ bool GUI::Initialize(std::shared_ptr<Window> window)
 	Microsoft::WRL::ComPtr<ID3DBlob> imgui_vertex_shader;
 	Microsoft::WRL::ComPtr<ID3DBlob> imgui_pixel_shader;
 	
-	ThrowIfFailed(D3DReadFileToBlob(L"ImGUI_VS.cso", &imgui_vertex_shader));
-	ThrowIfFailed(D3DReadFileToBlob(L"ImGUI_PS.cso", &imgui_pixel_shader));
+	ThrowIfFailed(D3DReadFileToBlob(L"EngineShaders/ImGUI_VS.cso", &imgui_vertex_shader));
+	ThrowIfFailed(D3DReadFileToBlob(L"EngineShaders/ImGUI_PS.cso", &imgui_pixel_shader));
 
 	pipeline_state_stream.pRootSignature = root_signature_->GetRootSignature().Get();
 	pipeline_state_stream.InputLayout = { input_layout, 3 };

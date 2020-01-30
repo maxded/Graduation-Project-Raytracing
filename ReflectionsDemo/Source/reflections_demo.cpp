@@ -423,6 +423,7 @@ bool ReflectionsDemo::LoadContent()
 	// Pipelinestates.
 	//=============================================================================
 
+	
 	// Create geometry pass pipeline state object with shader permutations.
 	{
 		// Setup the HDR pipeline State.
@@ -449,7 +450,7 @@ bool ReflectionsDemo::LoadContent()
 
 		// Load shaders.
 		ComPtr<ID3DBlob> vs;
-		ThrowIfFailed(D3DReadFileToBlob(L"GeometryPass_VS.cso", &vs));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/GeometryPass_VS.cso", &vs));
 
 		geometry_pipeline_state_stream.PRootSignature			= geometry_pass_root_signature_.GetRootSignature().Get();
 		geometry_pipeline_state_stream.InputLayout				= { &input_layout[0], static_cast<UINT>(input_layout.size()) };
@@ -499,8 +500,8 @@ bool ReflectionsDemo::LoadContent()
 		// Load shaders.
 		ComPtr<ID3DBlob> vs;
 		ComPtr<ID3DBlob> ps;
-		ThrowIfFailed(D3DReadFileToBlob(L"LightAccumulationPass_VS.cso", &vs));
-		ThrowIfFailed(D3DReadFileToBlob(L"LightAccumulationPass_PS.cso", &ps));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/LightAccumulationPass_VS.cso", &vs));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/LightAccumulationPass_PS.cso", &ps));
 
 		// Create rasterizer state.
 		CD3DX12_RASTERIZER_DESC rasterizer_desc(D3D12_DEFAULT);
@@ -535,8 +536,8 @@ bool ReflectionsDemo::LoadContent()
 		// Load shaders.
 		ComPtr<ID3DBlob> vs;
 		ComPtr<ID3DBlob> ps;
-		ThrowIfFailed(D3DReadFileToBlob(L"CompositePass_VS.cso", &vs));
-		ThrowIfFailed(D3DReadFileToBlob(L"CompositePass_PS.cso", &ps));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/CompositePass_VS.cso", &vs));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/CompositePass_PS.cso", &ps));
 
 		// Create rasterizer state.
 		CD3DX12_RASTERIZER_DESC rasterizer_desc(D3D12_DEFAULT);

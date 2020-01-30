@@ -13,7 +13,7 @@ GenerateMipsPSO::GenerateMipsPSO()
 	auto device = NeelEngine::Get().GetDevice();
 
 	Microsoft::WRL::ComPtr<ID3DBlob> cs;
-	ThrowIfFailed(D3DReadFileToBlob(L"generate_mips_cs.cso", &cs));
+	ThrowIfFailed(D3DReadFileToBlob(L"EngineShaders/generate_mips_cs.cso", &cs));
 
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data = {};
 	feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
