@@ -723,8 +723,8 @@ bool ReflectionsDemo::LoadContent()
 
 		auto GetShaderidentifiers = [&](auto* state_object_properties)
 		{
-			raygen_shader_id = state_object_properties->GetShaderIdentifier(c_raygen_shadow_pass_);
-			miss_shader_id = state_object_properties->GetShaderIdentifier(c_miss_shadow_pass_);
+			raygen_shader_id	= state_object_properties->GetShaderIdentifier(c_raygen_shadow_pass_);
+			miss_shader_id		= state_object_properties->GetShaderIdentifier(c_miss_shadow_pass_);
 		};
 
 		UINT shader_id_size;
@@ -869,7 +869,7 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 		{
 			DirectionalLight& l = directional_lights_[i];
 
-			XMVECTOR direction_ws = { -0.57f, 0.57f, 0.57f, 0.0 };
+			XMVECTOR direction_ws = { -0.57f, 0.87f, 0.47f, 0.0 };
 			XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
 
 			XMStoreFloat4(&l.DirectionWS, direction_ws);
@@ -883,14 +883,8 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 	{
 		XMMATRIX view_proj = camera.GetViewMatrix() * camera.GetProjectionMatrix();
 
-		scene_buffer_.InverseView		= XMMatrixInverse(nullptr, camera.GetViewMatrix());
-		scene_buffer_.InverseProj		= XMMatrixInverse(nullptr, camera.GetProjectionMatrix());
 		scene_buffer_.InverseViewProj	= XMMatrixInverse(nullptr, view_proj);
 		scene_buffer_.CamPos			= camera.GetTranslation();
-		scene_buffer_.LightDirection	= directional_lights_[0].DirectionWS;
-
-		light_accumulation_scene_data_.InverseViewProj	= XMMatrixInverse(nullptr, view_proj);
-		light_accumulation_scene_data_.CamPos			= camera.GetTranslation();
 	}
 
 	// Update viewport constants.
@@ -1018,7 +1012,7 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 		light_props.NumSpotLights			= static_cast<uint32_t>(spot_lights_.size());
 		light_props.NumDirectionalLights	= static_cast<uint32_t>(directional_lights_.size());
 
-		command_list->SetGraphicsDynamicConstantBuffer(LightAccumulationPassRootSignatureParams::SceneConstantData, light_accumulation_scene_data_);
+		command_list->SetGraphicsDynamicConstantBuffer(LightAccumulationPassRootSignatureParams::SceneConstantData, scene_buffer_);
 		command_list->SetGraphics32BitConstants(LightAccumulationPassRootSignatureParams::LightPropertiesCb, light_props);
 		command_list->SetGraphicsDynamicStructuredBuffer(LightAccumulationPassRootSignatureParams::PointLights, point_lights_);
 		command_list->SetGraphicsDynamicStructuredBuffer(LightAccumulationPassRootSignatureParams::SpotLights, spot_lights_);

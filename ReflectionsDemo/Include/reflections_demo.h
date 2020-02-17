@@ -124,21 +124,12 @@ private:
 	/**
 	* Scene constant data.
 	*/
-	struct SceneConstantBuffer
-	{
-		DirectX::XMMATRIX InverseView;
-		DirectX::XMMATRIX InverseProj;
-		DirectX::XMMATRIX InverseViewProj;
-		DirectX::XMVECTOR CamPos;
-		DirectX::XMFLOAT4 LightDirection;
-	};
 
-	struct LightAccumulationSceneData
+	struct SceneConstantBuffer
 	{
 		DirectX::XMMATRIX InverseViewProj;
 		DirectX::XMVECTOR CamPos;
 	};
 
 	SceneConstantBuffer scene_buffer_;
-	LightAccumulationSceneData light_accumulation_scene_data_;
 };

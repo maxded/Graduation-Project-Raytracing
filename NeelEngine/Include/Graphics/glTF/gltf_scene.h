@@ -4,9 +4,6 @@
 #include "mesh.h"
 #include "commandlist.h"
 #include "mesh_instance.h"
-#include "shader_data.h"
-#include "events.h"
-#include "material.h"
 
 class Scene
 {

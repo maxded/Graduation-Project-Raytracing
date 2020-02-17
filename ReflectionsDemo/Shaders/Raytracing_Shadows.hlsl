@@ -1,15 +1,13 @@
+#include "Common.hlsli"
+
 //=============================================================================
 // CPU data.
 //=============================================================================
 
-
 struct SceneData
 {
-	float4x4 InverseView;
-	float4x4 InverseProj;
 	float4x4 InverseViewProj;
 	float4 CameraPosition;
-	float4 LightDirection;
 };
 
 struct PointLight
@@ -91,19 +89,15 @@ SamplerState PointClampSampler								: register(s0);
 // Functions.
 //=============================================================================
 
-const float origin() { return 1.0 / 32.0; }
-const float float_scale() { return 1.0 / 65536.0; }
-const float int_scale() { return 256.0; }
 
-float Attenuation(float light_range, float d)
-{
-	return 1.0f - smoothstep(light_range * 0.75f, light_range, d);
-}
+static const float origin		= 1.0 / 32.0; 
+static const float float_scale = 1.0 / 65536.0; 
+static const float int_scale	= 256.0; 
 
 
 float3 OffsetRay(const float3 p, const float3 n)
 {
-	int3 of_i = float3(int_scale() * n.x, int_scale() * n.y, int_scale() * n.z);
+	int3 of_i = float3(int_scale * n.x, int_scale * n.y, int_scale * n.z);
 
 	float3 p_i; 
 
@@ -113,9 +107,9 @@ float3 OffsetRay(const float3 p, const float3 n)
 
 	float3 o;
 
-	o.x = abs(p.x) < origin() ? p.x + float_scale() * n.x : p_i.x;
-	o.y = abs(p.y) < origin() ? p.y + float_scale() * n.y : p_i.y;
-	o.z = abs(p.z) < origin() ? p.z + float_scale() * n.z : p_i.z;
+	o.x = abs(p.x) < origin ? p.x + float_scale * n.x : p_i.x;
+	o.y = abs(p.y) < origin ? p.y + float_scale * n.y : p_i.y;
+	o.z = abs(p.z) < origin ? p.z + float_scale * n.z : p_i.z;
 
 	return o;
 }
@@ -172,7 +166,7 @@ void ShadowPassRaygenShader()
 		float3 lightorigin = PointLights[i].PositionWS.xyz;
 
 		float d = distance(rayorigin, lightorigin);
-		float attenuation = Attenuation(PointLights[i].Range, d);
+		float attenuation = InverseSquare(d) * Windowing(d);
 
 		if (attenuation < 0.01)
 			continue;
