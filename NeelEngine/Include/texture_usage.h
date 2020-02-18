@@ -11,5 +11,5 @@ enum class TextureUsage
 	Emissivemap,
 	AmbientOcclusionmap,
 	RenderTarget,	// Texture is used as a render target.
-	ShadowMap,
+	UAV,
 };

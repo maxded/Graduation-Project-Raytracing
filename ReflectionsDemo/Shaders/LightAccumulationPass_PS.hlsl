@@ -1,71 +1,7 @@
 #include "Common.hlsli"
 
 //=============================================================================
-// CPU data.
-//=============================================================================
-
-struct PointLight
-{
-	float4 PositionWS; // Light position in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 PositionVS; // Light position in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	float       Intensity;
-	float       Range;
-	float2      Padding;                // Pad to 16 bytes
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 4 = 64 bytes
-};
-
-struct SpotLight
-{
-	float4 PositionWS; // Light position in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 PositionVS; // Light position in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionWS; // Light direction in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionVS; // Light direction in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	float       Intensity;
-	float       SpotAngle;
-	float       Attenuation;
-	float       Padding;                // Pad to 16 bytes.
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 6 = 96 bytes
-};
-
-struct DirectionalLight
-{
-	float4 DirectionWS; // Light direction in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionVS; // Light direction in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 3 = 48 bytes 
-};
-
-struct LightProperties
-{
-	uint NumPointLights;
-	uint NumSpotLights;
-	uint NumDirectionalLights;
-};
-
-struct SceneData
-{
-	float4x4 InverseViewProj;
-	float4 CameraPosition;
-};
-
-
-//=============================================================================
-// Functions.
+// Local functions.
 //=============================================================================
 
 

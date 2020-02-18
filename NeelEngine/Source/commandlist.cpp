@@ -13,6 +13,7 @@
 #include "vertex_buffer.h"
 #include "upload_buffer.h"
 #include "root_signature.h"
+#include "shader_table.h"
 
 #include "DirectXTex.h"
 
@@ -296,6 +297,62 @@ void CommandList::CopyBuffer(Buffer& buffer, size_t buffer_size, const void* buf
 		TrackResource(d3d12_resource);
 	}
 	buffer.SetD3D12Resource(d3d12_resource);
+}
+
+void CommandList::CopyShaderTable(ShaderTable& shader_table, UINT shader_record_size, const std::string& resource_name)
+{
+	auto device = NeelEngine::Get().GetDevice();
+
+	UINT record_size = math::AlignUp(shader_record_size, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	UINT buffer_size = shader_table.GetShaderRecords().size() * record_size;
+
+	shader_table.SetShaderRecordSize(record_size);
+	
+	ComPtr<ID3D12Resource> d3d12_resource;
+
+	ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(buffer_size),
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(&d3d12_resource)));
+	
+	// Add the resource to the global resource State tracker.
+	ResourceStateTracker::AddGlobalResourceState(d3d12_resource.Get(), D3D12_RESOURCE_STATE_COMMON);
+
+	if (shader_table.GetShaderRecords().data() != nullptr)
+	{
+		// Create an upload resource to use as an intermediate buffer to copy the buffer resource 
+		ComPtr<ID3D12Resource> upload_resource;
+		ThrowIfFailed(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(buffer_size),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&upload_resource)));
+
+		uint8_t* mapped_data;
+
+		CD3DX12_RANGE read_range(0, 0);
+		ThrowIfFailed(upload_resource->Map(0, &read_range, reinterpret_cast<void**>(&mapped_data)));
+		
+		for(const auto& shader_record : shader_table.GetShaderRecords())
+		{
+			shader_record.CopyTo(mapped_data);
+			mapped_data += record_size;
+		}
+
+		d3d12_command_list_->CopyBufferRegion(d3d12_resource.Get(), 0, upload_resource.Get(), 0, buffer_size);
+	
+		// Add references to resources so they stay in scope until the command list is reset.
+		TrackResource(upload_resource);
+	}
+	TrackResource(d3d12_resource);
+	
+	shader_table.SetD3D12Resource(d3d12_resource);
+	shader_table.SetName(resource_name);
 }
 
 void CommandList::CopyVertexBuffer(VertexBuffer& vertex_buffer, size_t num_vertices, size_t vertex_stride,

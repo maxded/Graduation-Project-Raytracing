@@ -24,6 +24,7 @@ class Texture;
 class UploadBuffer;
 class VertexBuffer;
 class GenerateMipsPSO;
+class ShaderTable;
 
 class CommandList
 {
@@ -123,6 +124,11 @@ public:
 
 	void CopyBuffer(Buffer& buffer, size_t buffer_size, const void* buffer_data,
 	                D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+
+	/**
+	 * Copy the contents to a shader table in GPU memory.
+	 */
+	void CopyShaderTable(ShaderTable& shader_table, UINT shader_record_size, const std::string& resource_name = "ShaderTable");
 
 	/**
 	 * Copy the contents to a vertex buffer in GPU memory.

@@ -5,6 +5,7 @@
 #include "root_signature.h"
 #include "gltf_scene.h"
 
+#include "shader_table.h"
 #include "acceleration_structure.h"
 
 class ReflectionsDemo : public Game
@@ -57,12 +58,17 @@ private:
 	RenderTarget rt_shadows_pass_render_target_;
 	RenderTarget light_accumulation_pass_render_target_;
 
+	Texture shadow_texture_;
+	Texture reflection_texture_;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC depth_buffer_view_;
+
 	RootSignature geometry_pass_root_signature_;
 	RootSignature rt_shadows_pass_global_root_signature_;
+	RootSignature rt_reflections_pass_global_root_signature_;
+	RootSignature rt_reflections_pass_local_root_signature_;
 	RootSignature light_accumulation_pass_root_signature_;
 	RootSignature composite_pass_root_signature_;
-
-	Texture shadow_texture_;
 
 	// Map containing all different pipeline states for each mesh with different shader options (permutations).
 	std::unordered_map<ShaderOptions, Microsoft::WRL::ComPtr<ID3D12PipelineState>> geometry_pass_pipeline_state_map_;
@@ -70,10 +76,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> light_accumulation_pass_pipeline_state_;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> composite_pass_pipeline_state_;
 
-	const Texture* current_display_texture_;
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC depth_buffer_view_;
-
+	Microsoft::WRL::ComPtr<ID3D12StateObject> shadow_pass_state_object_;
+	Microsoft::WRL::ComPtr<ID3D12StateObject> reflection_pass_state_object_;
+	
 	AccelerationStructure bottom_level_acceleration_structure_;
 	AccelerationStructure top_level_acceleration_structure_;
 
@@ -81,12 +86,18 @@ private:
 	static const wchar_t* c_raygen_shadow_pass_;
 	static const wchar_t* c_miss_shadow_pass_;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> miss_shader_table_;
-	Microsoft::WRL::ComPtr<ID3D12Resource> raygen_shader_table_;
+	static const wchar_t* c_raygen_reflection_pass_;
+	static const wchar_t* c_closesthit_reflection_pass_;
+	static const wchar_t* c_hitgroup_reflection_pass_;
+	static const wchar_t* c_miss_reflection_pass_;
 
-	Microsoft::WRL::ComPtr<ID3D12StateObject> shadow_pass_state_object_;
+	ShaderTable raygen_shader_table_;
+	ShaderTable hitgroup_shader_table_;
+	ShaderTable miss_shader_table_;
 
 	D3D12_RECT scissor_rect_;
+
+	const Texture* current_display_texture_;
 
 	// Set to true if the Shift key is pressed.
 	bool shift_;

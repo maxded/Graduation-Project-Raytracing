@@ -1,70 +1,6 @@
 #include "Common.hlsli"
 
 //=============================================================================
-// CPU data.
-//=============================================================================
-
-struct SceneData
-{
-	float4x4 InverseViewProj;
-	float4 CameraPosition;
-};
-
-struct PointLight
-{
-	float4 PositionWS; // Light position in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 PositionVS; // Light position in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	float       Intensity;
-	float       Range;
-	float2      Padding;                // Pad to 16 bytes
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 4 = 64 bytes
-};
-
-struct SpotLight
-{
-	float4 PositionWS; // Light position in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 PositionVS; // Light position in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionWS; // Light direction in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionVS; // Light direction in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	float       Intensity;
-	float       SpotAngle;
-	float       Attenuation;
-	float       Padding;                // Pad to 16 bytes.
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 6 = 96 bytes
-};
-
-struct DirectionalLight
-{
-	float4 DirectionWS; // Light direction in world space.
-	//----------------------------------- (16 byte boundary)
-	float4 DirectionVS; // Light direction in view space.
-	//----------------------------------- (16 byte boundary)
-	float4 Color;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 3 = 48 bytes 
-};
-
-struct LightProperties
-{
-	uint NumPointLights;
-	uint NumSpotLights;
-	uint NumDirectionalLights;
-};
-
-
-//=============================================================================
 // Bindings.
 //=============================================================================
 
@@ -85,39 +21,11 @@ RWTexture2D<float> RenderTarget								: register(u0);
 SamplerState PointClampSampler								: register(s0);
 
 
-//=============================================================================
-// Functions.
-//=============================================================================
-
-
-static const float origin		= 1.0 / 32.0; 
-static const float float_scale = 1.0 / 65536.0; 
-static const float int_scale	= 256.0; 
-
-
-float3 OffsetRay(const float3 p, const float3 n)
-{
-	int3 of_i = float3(int_scale * n.x, int_scale * n.y, int_scale * n.z);
-
-	float3 p_i; 
-
-	p_i.x = asfloat(asint(p.x) + ((p.x < 0) ? -of_i.x : of_i.x));
-	p_i.y = asfloat(asint(p.y) + ((p.y < 0) ? -of_i.y : of_i.y));
-	p_i.z = asfloat(asint(p.z) + ((p.z < 0) ? -of_i.z : of_i.z));
-
-	float3 o;
-
-	o.x = abs(p.x) < origin ? p.x + float_scale * n.x : p_i.x;
-	o.y = abs(p.y) < origin ? p.y + float_scale * n.y : p_i.y;
-	o.z = abs(p.z) < origin ? p.z + float_scale * n.z : p_i.z;
-
-	return o;
-}
-
 struct ShadowPayload
 {
 	bool miss;
 };
+
 
 //=============================================================================
 // Shader code.
@@ -151,14 +59,12 @@ void ShadowPassRaygenShader()
 
 	// Perspective division.
 	float3 world = worldspaceposition.xyz / worldspaceposition.w;
+	float3 rayorigin = OffsetRay(world, worldnormal);
+
 
 	// Initialize the payload: assume that we have hit something.
 	ShadowPayload payload;
 	payload.miss = false;
-
-	// Offset ray origin for floating point inprecision.
-	// Nvidia's "Adaptive Offsetting Along The Geometric Normal" proposal -> Ray Tracing Gems pg.82 (book)
-	float3 rayorigin	= OffsetRay(world, worldnormal);
 
 	// Find closest light source.
 	for (uint i = 0; i < LightPropertiesCB.NumPointLights; ++i)

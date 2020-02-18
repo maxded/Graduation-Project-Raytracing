@@ -51,3 +51,14 @@ namespace RtShadowsPassGlobalRootSignatureParams
 		NumRootParameters
 	};
 }
+
+namespace RtReflectionPassGlobalRootSignatureParams
+{
+	enum
+	{
+		RenderTarget = 0,		// RWTexture2D<float>		 g_RenderTarget					: register( u0 );
+		SceneConstantData,		// ConstantBuffer<SceneData> g_SceneData					: register( b0 );
+		GBuffer,				// Texture2D				 g_GBuffer						: register( t0 );		
+		NumRootParameters
+	};
+}

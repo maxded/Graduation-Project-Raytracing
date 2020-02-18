@@ -41,13 +41,15 @@ public:
 class ShaderTable : public Resource
 {
 public:
-	ShaderTable(UINT num_shader_records, UINT shader_record_size, const std::string& resource_name = "Shader Table");
+	ShaderTable();
 
 	void push_back(const ShaderRecord& shader_record);
 
-	uint8_t* MapCpuWriteOnly();
-	
 	UINT GetShaderRecordSize() const { return shader_record_size_; }
+
+	void SetShaderRecordSize(UINT size) { shader_record_size_ = size; }
+
+	std::vector<ShaderRecord>& GetShaderRecords() { return shader_records_; }
 
 	/**
 	* Get the SRV for a resource.
@@ -61,9 +63,7 @@ public:
 	virtual D3D12_CPU_DESCRIPTOR_HANDLE GetUnorderedAccessView(
 		const D3D12_UNORDERED_ACCESS_VIEW_DESC* uav_desc = nullptr) const override;
 
-private:
+private:	
 	std::vector<ShaderRecord> shader_records_;
 	UINT shader_record_size_;
-
-	uint8_t* mapped_shader_records_;
 };
