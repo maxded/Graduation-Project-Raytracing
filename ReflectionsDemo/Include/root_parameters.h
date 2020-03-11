@@ -4,9 +4,10 @@ namespace GeometryPassRootSignatureParams
 {
 	enum
 	{
-		Materials = 0,			// ConstantBuffer<MaterialData> Materials				: register( b0 );
-		MeshConstantBuffer,		// ConstantBuffer<Mat> MatCB							: register( b1 );			
-		Textures,				// Texture2D textures[5]								: register( t0 );
+		MaterialConstantBuffer = 0,	// ConstantBuffer<MaterialConstantBuffer> MaterialCB	: register( b0 );
+		MeshConstantBuffer,			// ConstantBuffer<Mat> MatCB							: register( b1 );			
+		Textures,					// Texture2D textures[5]								: register( t0 );
+		Materials,					// StructuredBuffer<MaterialData> Materials				: register( t5 );
 		NumRootParameters
 	};
 }
@@ -36,7 +37,7 @@ namespace CompositePassRootSignatureParams
 	};
 }
 
-namespace RtShadowsPassGlobalRootSignatureParams
+namespace RtGlobalRootSignatureParams
 {
 	enum
 	{
@@ -47,18 +48,16 @@ namespace RtShadowsPassGlobalRootSignatureParams
 		SpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t1 );
 		DirectionalLights,		// StructuredBuffer<DirectionalLight> DirectionalLights : register( t2 );
 		AccelerationStructure,	// RaytracingAccelerationStructure Scene				: register( t3 );
-		Textures,				// Texture2D Textures[2]								: register( t4 );
+		GBuffer,				// Texture2D GBuffer[2]								: register( t4 );
 		NumRootParameters
 	};
 }
 
-namespace RtReflectionPassGlobalRootSignatureParams
+namespace RtLocalRootSignatureParams
 {
 	enum
 	{
-		RenderTarget = 0,		// RWTexture2D<float>		 g_RenderTarget					: register( u0 );
-		SceneConstantData,		// ConstantBuffer<SceneData> g_SceneData					: register( b0 );
-		GBuffer,				// Texture2D				 g_GBuffer						: register( t0 );		
+		MaterialConstantBuffer = 0,
 		NumRootParameters
 	};
 }

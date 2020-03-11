@@ -60,7 +60,6 @@ Texture2D GBuffer[6]										: register(t3);
 
 SamplerState PointClampSampler								: register(s0);
 
-
 //=============================================================================
 // Shader code.
 //=============================================================================
@@ -73,12 +72,10 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 	float2 metal_rough_sample		 = GBuffer[2].SampleLevel(PointClampSampler, TexCoord, 0).rg;
 	float4 emissive_occlusion_sample = GBuffer[3].SampleLevel(PointClampSampler, TexCoord, 0);
 	float  depth_sample				 = GBuffer[4].SampleLevel(PointClampSampler, TexCoord, 0).r;
-	float  shadow_sample			 = GBuffer[5].SampleLevel(PointClampSampler, TexCoord, 0).r;
+	float  shadow_sample			 = GBuffer[5].SampleLevel(PointClampSampler, TexCoord, 0).a;
 
 	float perceptual_roughness = clamp(metal_rough_sample.g, 0.04, 1.0);
 	float metallic = clamp(metal_rough_sample.r, 0.0, 1.0);
-
-	float alpha_roughness = perceptual_roughness * perceptual_roughness;
 
 	float3 f0 = 0.04;
 	float3 specular_color = lerp(f0, albedo_sample.rgb, metallic);

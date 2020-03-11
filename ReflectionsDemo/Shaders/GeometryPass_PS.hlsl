@@ -2,6 +2,11 @@
 // CPU data.
 //=============================================================================
 
+struct MaterialConstantBuffer
+{
+	int MaterialIndex;
+	int3 Padding;
+};
 
 struct MaterialData
 {
@@ -9,15 +14,20 @@ struct MaterialData
 	//----------------------------------- (16 byte boundary)
 	float4 BaseColorFactor;
 	//----------------------------------- (16 byte boundary)
+	int BaseColorIndex;
+	int NormalIndex;
+	int MetalRoughIndex;
+	int OcclusionIndex;
+	//----------------------------------- (16 byte boundary)
+	int EmissiveIndex;
 	float NormalScale;
 	float RoughnessFactor;
 	float MetallicFactor;
+	//----------------------------------- (16 byte boundary)
 	float AoStrength;
-	//----------------------------------- (16 byte boundary)
 	float3 EmissiveFactor;
-	float  Padding;
 	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 4 = 64 bytes 
+	// Total:                              16 * 5 = 80 bytes 
 };
 
 struct MeshConstantData
@@ -40,11 +50,12 @@ struct MeshConstantData
 // Bindings.
 //=============================================================================
 
-
-ConstantBuffer<MaterialData>			Material			: register(b0);
+ConstantBuffer<MaterialConstantBuffer>  MaterialCB			: register(b0);
 ConstantBuffer<MeshConstantData>		MeshCB				: register(b1);
 
-Texture2D Textures[5]										: register(t0);
+StructuredBuffer<MaterialData> Materials					: register(t0);
+
+Texture2D Textures[69]										: register(t1);
 
 SamplerState LinearRepeatSampler							: register(s0);
 
@@ -82,73 +93,97 @@ PixelShaderOutput main(PixelShaderInput IN)
 {
 	PixelShaderOutput output;
 
-#if USE_AUTO_COLOR
-	// TODO: add auto color functionality.
-#else
+	MaterialData material = Materials[MaterialCB.MaterialIndex];
 
-#if HAS_BASECOLORMAP
-	float4 base_color = Textures[0].Sample(LinearRepeatSampler, IN.TexCoord) * Material.BaseColorFactor;
-#else
-	float4 base_color = Material.BaseColorFactor;
-#endif
+	float4 base_color;
+	float3 n;
+	float metallic;
+	float roughness;
+	float3 emissive;
+	float ao;
 
-#if HAS_METALROUGHNESSMAP
-	float4 metal_rough_sample		= Textures[2].Sample(LinearRepeatSampler, IN.TexCoord);
+	if (material.BaseColorIndex >= 0)
+	{
+		base_color = Textures[material.BaseColorIndex].Sample(LinearRepeatSampler, IN.TexCoord) *material.BaseColorFactor;
+	}
+	else 
+	{
+		base_color = material.BaseColorFactor;
+	}
 
-	float perceptual_roughness		= metal_rough_sample.g * Material.RoughnessFactor;
-	float metallic					= metal_rough_sample.b * Material.MetallicFactor;
-#else
-	float perceptual_roughness		= Material.RoughnessFactor;
-	float metallic					= Material.MetallicFactor;
-#endif
+	float4 metal_rough_sample;
 
-#if HAS_TANGENTS
+	if (material.MetalRoughIndex >= 0)
+	{
+		metal_rough_sample = Textures[material.MetalRoughIndex].Sample(LinearRepeatSampler, IN.TexCoord);
+
+		roughness = metal_rough_sample.g *material.RoughnessFactor;
+		metallic = metal_rough_sample.b *material.MetallicFactor;
+	}
+	else
+	{
+		roughness = material.RoughnessFactor;
+		metallic = material.MetallicFactor;
+	}
+
+//#if HAS_TANGENTS
 	float3x3 TBN = float3x3(normalize(IN.TangentW), normalize(IN.BinormalW), normalize(IN.NormalW));
-#else
+//#else
 	// WIP
-	float3 pos_dx = ddx(IN.PositionW);
-	float3 pos_dy = ddy(IN.PositionW);
-	float2 tex_dx = ddx(IN.TexCoord);
-	float2 tex_dy = ddy(IN.TexCoord);
+	//float3 pos_dx = ddx(IN.PositionW);
+	//float3 pos_dy = ddy(IN.PositionW);
+	//float2 tex_dx = ddx(IN.TexCoord);
+	//float2 tex_dy = ddy(IN.TexCoord);
 
-	float3 t = tex_dy.y * pos_dx - tex_dx.y * pos_dy;
-	float3 b = tex_dx.x * pos_dy - tex_dy.x * pos_dx;
-	float3 n = normalize(IN.NormalW);
+	//float3 t = tex_dy.y * pos_dx - tex_dx.y * pos_dy;
+	//float3 b = tex_dx.x * pos_dy - tex_dy.x * pos_dx;
+	//float3 n = normalize(IN.NormalW);
 
-	float3x3 TBN = float3x3(t, b, n);
-#endif
+	//float3x3 TBN = float3x3(t, b, n);
+//#endif
 
-#if HAS_NORMALMAP
-	float4 normal_map_sample = Textures[1].Sample(LinearRepeatSampler, IN.TexCoord);
-	normal_map_sample.g = 1.0 - normal_map_sample.g;
+	if (material.NormalIndex >= 0)
+	{
+		float4 normal_map_sample = Textures[material.NormalIndex].Sample(LinearRepeatSampler, IN.TexCoord);
+		normal_map_sample.g = 1.0 - normal_map_sample.g;
 
-	float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * float3(Material.NormalScale, Material.NormalScale, 1.0);
-	float3 N = normalize(mul(normal, TBN));
-#else
-	float3 N = TBN[2].xyz;
-#endif	
+		float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * float3(material.NormalScale, material.NormalScale, 1.0);
+		n = normalize(mul(normal, TBN));
+	}
+	else 
+	{
+		n = TBN[2].xyz;
+	}
 
-#if HAS_OCCLUSIONMAP
-#if HAS_OCCLUSIONMAP_COMBINED
-	float ao = metalRoughSample.r;
-#else
-	float ao = Textures[3].Sample(LinearRepeatSampler, IN.TexCoord);
-#endif
-	color = lerp(color, color * ao, Material.AoStrength);
-#else
-	float ao = 0.0;
-#endif
+	if (material.OcclusionIndex >= 0)
+	{
+		if (material.OcclusionIndex == material.MetalRoughIndex)
+		{
+			ao = metal_rough_sample.r;
+		}
+		else
+		{
+			ao = Textures[material.OcclusionIndex].Sample(LinearRepeatSampler, IN.TexCoord);
+		}
+	}
+	else
+	{
+		ao = 0.0;
+	}
+	
+	if (material.EmissiveIndex >= 0)
+	{
+		emissive = Textures[material.EmissiveIndex].Sample(LinearRepeatSampler, IN.TexCoord).rgb * material.EmissiveFactor;
+	}
+	else
+	{
+		emissive = material.EmissiveFactor;
+	}
 
-#if HAS_EMISSIVEMAP
-	float3 emissive = Textures[4].Sample(LinearRepeatSampler, IN.TexCoord).rgb * Material.EmissiveFactor;
-#else
-	float3 emissive = Material.EmissiveFactor;	
-#endif
 	output.AlbedoBuffer				= base_color;
-	output.NormalBuffer				= float4(N, 1.0);
-	output.MetalRoughBuffer			= float2(metallic, perceptual_roughness);
+	output.NormalBuffer				= float4(n, 1.0);
+	output.MetalRoughBuffer			= float2(metallic, roughness);
 	output.EmissiveOcclusionBuffer	= float4(emissive, ao);
-#endif
 
 	return output;
 }

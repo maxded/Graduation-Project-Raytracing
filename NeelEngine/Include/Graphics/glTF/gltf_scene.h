@@ -17,6 +17,10 @@ public:
 	void LoadBasicGeometry(CommandList& command_list);
 
 	std::vector<Mesh>& GetMeshes() { return meshes_; }
+
+	std::vector<MeshMaterialData>& GetMaterialData() { return material_data_; }
+
+	std::vector<Texture>& GetTextures() { return textures_; }
 	
 	const std::vector<MeshInstance>& GetInstances() const { return mesh_instances_; }
 
@@ -37,6 +41,10 @@ protected:
 	* Data extracted from the glTF 2.0 file
 	*/
 	std::vector<Mesh>	meshes_;
+	std::vector<Material> materials_;
+	std::vector<MeshMaterialData> material_data_;
+	std::vector<Texture> textures_;
+	
 	int total_number_meshes_;
 	bool basic_geometry_loaded_;
 };

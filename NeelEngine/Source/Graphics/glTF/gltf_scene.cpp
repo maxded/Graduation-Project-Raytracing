@@ -27,14 +27,17 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list,
 	if (StringEndsWith(filename, ".glb"))
 		document = fx::gltf::LoadFromBinary(filename);
 
-	std::vector<Material> materials(document.materials.size());
-	
 	// Generate material data for current document.
 	{
+		materials_.resize(document.materials.size());
+		material_data_.resize(document.materials.size());
+		textures_.resize(document.textures.size());
+		
 		for(int i = 0; i < document.materials.size(); i++)
 		{
 			const fx::gltf::Material& material = document.materials[i];
-			materials[i].Load(document, i, command_list, filename);
+			materials_[i].Load(document, i, command_list, textures_, filename);
+			material_data_[i] = materials_[i].GetMaterialData();
 		}
 	}
 	
@@ -44,7 +47,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list,
 
 		for (int i = 0; i < document.meshes.size(); i++)
 		{
-			meshes_[i].Load(document, i, command_list, &materials);
+			meshes_[i].Load(document, i, command_list, &materials_);
 			total_number_meshes_ += meshes_[i].GetSubMeshes().size();
 		}
 	}

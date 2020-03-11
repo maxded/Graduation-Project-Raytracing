@@ -21,16 +21,12 @@ using namespace DirectX;
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
 
-#include "CompiledShaders/Raytracing_Shadows.hlsl.h"
-#include "CompiledShaders/Raytracing_Reflections.hlsl.h"
+#include "CompiledShaders/Raytracing.hlsl.h"
 
-const wchar_t* ReflectionsDemo::c_raygen_shadow_pass_ = L"ShadowPassRaygenShader";
-const wchar_t* ReflectionsDemo::c_miss_shadow_pass_   = L"ShadowPassMissShader";
-
-const wchar_t* ReflectionsDemo::c_raygen_reflection_pass_		= L"ReflectionPassRaygenShader";
-const wchar_t* ReflectionsDemo::c_closesthit_reflection_pass_	= L"ReflectionPassClosesthitShader";
-const wchar_t* ReflectionsDemo::c_miss_reflection_pass_			= L"ReflectionPassMissShader";
-const wchar_t* ReflectionsDemo::c_hitgroup_reflection_pass_		= L"ReflectionPassHitGroup";
+const wchar_t* ReflectionsDemo::c_raygen_shader_		= L"RaygenShader";
+const wchar_t* ReflectionsDemo::c_closesthit_shader_	= L"ClosesthitShader";
+const wchar_t* ReflectionsDemo::c_miss_shader_			= L"MissShader";
+const wchar_t* ReflectionsDemo::c_hitgroup_				= L"Hitgroup";
 
 enum TonemapMethod : uint32_t
 {
@@ -306,42 +302,26 @@ bool ReflectionsDemo::LoadContent()
 	}
 
 	//=============================================================================
-	// Textures.
+	// GBuffer.
 	//=============================================================================
 
 
-	// UAV - shadow texture.
+	// UAV - raytracing output texture.
 	{
-		DXGI_FORMAT shadow_buffer_format = DXGI_FORMAT_R8_UNORM;
+		DXGI_FORMAT raytracing_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-		// Shadow texture. R8_UINT.
+		//  raytracing output texture. R8G8B8A8_UNORM.
 		{
 			// Create a shadow buffer for the raytracing shadow pass.
-			auto shadow_desc = CD3DX12_RESOURCE_DESC::Tex2D(shadow_buffer_format, width, height);
-			shadow_desc.MipLevels = 1;
-			shadow_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			auto raytracing_desc = CD3DX12_RESOURCE_DESC::Tex2D(raytracing_buffer_format, width, height);
+			raytracing_desc.MipLevels = 1;
+			raytracing_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 			// Create shadow buffer render target texture.
-			shadow_texture_ = Texture(shadow_desc, nullptr, TextureUsage::UAV, "ShadowMap");
+			raytracing_output_texture_ = Texture(raytracing_desc, nullptr, TextureUsage::UAV, "Raytracing output");
 		}
 	}
 
-	// UAV - reflection texture.
-	{
-		DXGI_FORMAT reflection_buffer_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-		// reflection texture . R16G16B16A16_FLOAT.
-		{
-			auto reflection_desc = CD3DX12_RESOURCE_DESC::Tex2D(reflection_buffer_format, width, height);
-			reflection_desc.MipLevels = 1;
-			reflection_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-			// Create reflection buffer render target texture.
-			reflection_texture_ = Texture(reflection_desc, nullptr, TextureUsage::UAV, "ReflectionMap");
-		}
-	}
-	
-	
 	//=============================================================================
 	// Rootsignatures.
 	//=============================================================================
@@ -364,12 +344,13 @@ bool ReflectionsDemo::LoadContent()
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
-		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0);
+		CD3DX12_DESCRIPTOR_RANGE1 descriptor_range(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, scene_.GetTextures().size(), 1);
 
 		CD3DX12_ROOT_PARAMETER1 root_parameters[GeometryPassRootSignatureParams::NumRootParameters];
-		root_parameters[GeometryPassRootSignatureParams::Materials].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);			// TODO: Change to structured buffer.
+		root_parameters[GeometryPassRootSignatureParams::MaterialConstantBuffer].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
 		root_parameters[GeometryPassRootSignatureParams::MeshConstantBuffer].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
 		root_parameters[GeometryPassRootSignatureParams::Textures].InitAsDescriptorTable(1, &descriptor_range, D3D12_SHADER_VISIBILITY_PIXEL);
+		root_parameters[GeometryPassRootSignatureParams::Materials].InitAsShaderResourceView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
 
 		CD3DX12_STATIC_SAMPLER_DESC static_sampler
 		(
@@ -388,23 +369,23 @@ bool ReflectionsDemo::LoadContent()
 		geometry_pass_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
 
-	// Create raytracing shadows global root signature.
+	// Create raytracing global root signature.
 	{
 		CD3DX12_DESCRIPTOR_RANGE1 uav_descriptor;
 		uav_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
 		CD3DX12_DESCRIPTOR_RANGE1 srv_descriptor;
-		srv_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 4);
+		srv_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 4);
 
-		CD3DX12_ROOT_PARAMETER1 root_parameters[RtShadowsPassGlobalRootSignatureParams::NumRootParameters];
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::RenderTarget].InitAsDescriptorTable(1, &uav_descriptor);
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::SceneConstantData].InitAsConstantBufferView(0);
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::LightPropertiesCb].InitAsConstants(sizeof(SceneLightProperties) / 4, 1, 0);
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::PointLights].InitAsShaderResourceView(0);
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::SpotLights].InitAsShaderResourceView(1);
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::DirectionalLights].InitAsShaderResourceView(2);
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::Textures].InitAsDescriptorTable(1, &srv_descriptor);
-		root_parameters[RtShadowsPassGlobalRootSignatureParams::AccelerationStructure].InitAsShaderResourceView(3);
+		CD3DX12_ROOT_PARAMETER1 root_parameters[RtGlobalRootSignatureParams::NumRootParameters];
+		root_parameters[RtGlobalRootSignatureParams::RenderTarget].InitAsDescriptorTable(1, &uav_descriptor);
+		root_parameters[RtGlobalRootSignatureParams::SceneConstantData].InitAsConstantBufferView(0);
+		root_parameters[RtGlobalRootSignatureParams::LightPropertiesCb].InitAsConstants(sizeof(SceneLightProperties) / 4, 1, 0);
+		root_parameters[RtGlobalRootSignatureParams::PointLights].InitAsShaderResourceView(0);
+		root_parameters[RtGlobalRootSignatureParams::SpotLights].InitAsShaderResourceView(1);
+		root_parameters[RtGlobalRootSignatureParams::DirectionalLights].InitAsShaderResourceView(2);
+		root_parameters[RtGlobalRootSignatureParams::GBuffer].InitAsDescriptorTable(1, &srv_descriptor);
+		root_parameters[RtGlobalRootSignatureParams::AccelerationStructure].InitAsShaderResourceView(3);
 
 		CD3DX12_STATIC_SAMPLER_DESC point_clamp_sampler(
 			0,
@@ -414,42 +395,20 @@ bool ReflectionsDemo::LoadContent()
 			D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(RtShadowsPassGlobalRootSignatureParams::NumRootParameters, root_parameters, 1, &point_clamp_sampler);
+		root_signature_description.Init_1_1(RtGlobalRootSignatureParams::NumRootParameters, root_parameters, 1, &point_clamp_sampler);
 
-		rt_shadows_pass_global_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
+		raytracing_global_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
 
-	// Create raytracing reflections global root signature.
+	// Create raytracing local root signature.
 	{
-		CD3DX12_DESCRIPTOR_RANGE1 srv_descriptor;
-		srv_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0);
+		CD3DX12_ROOT_PARAMETER1 root_parameters[RtLocalRootSignatureParams::NumRootParameters];
+		root_parameters[RtLocalRootSignatureParams::MaterialConstantBuffer].InitAsConstants(sizeof(MaterialConstantBuffer) / 4, 3, 0);
 
-		
-		CD3DX12_DESCRIPTOR_RANGE1 uav_descriptor;
-		uav_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-
-		CD3DX12_ROOT_PARAMETER1 root_parameters[RtReflectionPassGlobalRootSignatureParams::NumRootParameters];
-		root_parameters[RtReflectionPassGlobalRootSignatureParams::RenderTarget].InitAsDescriptorTable(1, &uav_descriptor);
-		root_parameters[RtReflectionPassGlobalRootSignatureParams::SceneConstantData].InitAsConstantBufferView(0);
-		root_parameters[RtReflectionPassGlobalRootSignatureParams::GBuffer].InitAsDescriptorTable(1, &srv_descriptor);
-
-		CD3DX12_STATIC_SAMPLER_DESC point_clamp_sampler(
-			0,
-			D3D12_FILTER_MIN_MAG_MIP_POINT,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-
-		
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(RtReflectionPassGlobalRootSignatureParams::NumRootParameters, root_parameters, 1, &point_clamp_sampler);
+		root_signature_description.Init_1_1(RtLocalRootSignatureParams::NumRootParameters, root_parameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE);
 
-		rt_reflections_pass_global_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
-	}
-
-	// Create raytracing reflections local root signature.
-	{
-
+		raytracing_local_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
 
 	// Create the light accumulation pass root signature.
@@ -535,39 +494,25 @@ bool ReflectionsDemo::LoadContent()
 
 		// Load shaders.
 		ComPtr<ID3DBlob> vs;
+		ComPtr<ID3DBlob> ps;
 		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/GeometryPass_VS.cso", &vs));
+		ThrowIfFailed(D3DReadFileToBlob(L"Shaders/GeometryPass_PS.cso", &ps));
 
 		geometry_pipeline_state_stream.PRootSignature			= geometry_pass_root_signature_.GetRootSignature().Get();
 		geometry_pipeline_state_stream.InputLayout				= { &input_layout[0], static_cast<UINT>(input_layout.size()) };
 		geometry_pipeline_state_stream.Rasterizer				= CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);;
 		geometry_pipeline_state_stream.PrimitiveTopologyType	= D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		geometry_pipeline_state_stream.VS						= CD3DX12_SHADER_BYTECODE(vs.Get());
+		geometry_pipeline_state_stream.PS						= CD3DX12_SHADER_BYTECODE(ps.Get());
 		geometry_pipeline_state_stream.DSVFormat				= geometry_pass_render_target_.GetDepthStencilFormat();
 		geometry_pipeline_state_stream.RTVFormats				= geometry_pass_render_target_.GetRenderTargetFormats();
 
-		ComPtr<ID3DBlob> pixel_blob = CompileShaderPerumutation("main", ShaderOptions::USE_AUTO_COLOR);
-		geometry_pipeline_state_stream.PS = CD3DX12_SHADER_BYTECODE(pixel_blob.Get());
-
-		D3D12_PIPELINE_STATE_STREAM_DESC geometry_pipeline_state_stream_desc = { sizeof(GeometryPipelineStateStream), &geometry_pipeline_state_stream };
-		ThrowIfFailed(device->CreatePipelineState(&geometry_pipeline_state_stream_desc, IID_PPV_ARGS(&geometry_pass_pipeline_state_map_[ShaderOptions::USE_AUTO_COLOR])));
-
-		// Compile shader permutations for all required options for meshes.
-		for (const auto& mesh : scene_.GetMeshes())
-		{
-			std::vector<ShaderOptions> required_options = mesh.RequiredShaderOptions();
-
-			for (const ShaderOptions options : required_options)
-			{
-				if (geometry_pass_pipeline_state_map_[options] == nullptr)
-				{
-					ComPtr<ID3DBlob> ps_blob = CompileShaderPerumutation("main", options);
-					geometry_pipeline_state_stream.PS = CD3DX12_SHADER_BYTECODE(ps_blob.Get());
-
-					D3D12_PIPELINE_STATE_STREAM_DESC state_stream_desc = { sizeof(GeometryPipelineStateStream), &geometry_pipeline_state_stream };
-					ThrowIfFailed(device->CreatePipelineState(&state_stream_desc, IID_PPV_ARGS(&geometry_pass_pipeline_state_map_[options])));
-				}
-			}
-		}
+		// Create the pipeline state.
+		D3D12_PIPELINE_STATE_STREAM_DESC geometry_pipeline_stream_desc = {
+			sizeof(GeometryPipelineStateStream), & geometry_pipeline_state_stream
+		};
+		ThrowIfFailed(device->CreatePipelineState(&geometry_pipeline_stream_desc, IID_PPV_ARGS(&geometry_pass_pipeline_state_)));
+		
 	}
 
 	// Create raytracing shadows pipeline state object.
@@ -577,11 +522,17 @@ bool ReflectionsDemo::LoadContent()
 		// DXIL library
 		// This contains the shaders and their entrypoints for the state object.
 		auto lib = raytracing_pipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)g_pRaytracing_Shadows, ARRAYSIZE((g_pRaytracing_Shadows)));
+		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)g_pRaytracing, ARRAYSIZE((g_pRaytracing)));
 		lib->SetDXILLibrary(&libdxil);
 
-		lib->DefineExport(c_raygen_shadow_pass_);
-		lib->DefineExport(c_miss_shadow_pass_);
+		lib->DefineExport(c_raygen_shader_);
+		lib->DefineExport(c_closesthit_shader_);
+		lib->DefineExport(c_miss_shader_);
+
+		auto hit_group = raytracing_pipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
+		hit_group->SetClosestHitShaderImport(c_closesthit_shader_);
+		hit_group->SetHitGroupExport(c_hitgroup_);
+		hit_group->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
 
 		// Shader config
 		// Defines the maximum sizes in bytes for the ray payload and attribute structure.
@@ -591,10 +542,18 @@ bool ReflectionsDemo::LoadContent()
 		shader_config->Config(payload_size, attribute_size);
 
 		// Local Root Signature
+		auto local_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+		local_root_signature->SetRootSignature(raytracing_local_root_signature_.GetRootSignature().Get());
+		// Define explicit shader association for the local root signature. 
+		{
+			auto root_signature_association = raytracing_pipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+			root_signature_association->SetSubobjectToAssociate(*local_root_signature);
+			root_signature_association->AddExport(c_hitgroup_);
+		}
 
 		// GLobal root signature
 		auto global_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-		global_root_signature->SetRootSignature(rt_shadows_pass_global_root_signature_.GetRootSignature().Get());
+		global_root_signature->SetRootSignature(raytracing_global_root_signature_.GetRootSignature().Get());
 
 		// Pipeline config
 		auto pipeline_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
@@ -605,51 +564,7 @@ bool ReflectionsDemo::LoadContent()
 #endif
 
 		// Create state object
-		ThrowIfFailed(device->CreateStateObject(raytracing_pipeline, IID_PPV_ARGS(&shadow_pass_state_object_)));
-	}
-
-	// Create raytracing reflections pipeline state object.
-	{
-		CD3DX12_STATE_OBJECT_DESC raytracing_pipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
-
-		// DXIL library
-		// This contains the shaders and their entrypoints for the state object.
-		auto lib = raytracing_pipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)g_pRaytracing_Reflections, ARRAYSIZE((g_pRaytracing_Reflections)));
-		lib->SetDXILLibrary(&libdxil);
-
-		lib->DefineExport(c_raygen_reflection_pass_);
-		lib->DefineExport(c_closesthit_reflection_pass_);
-		lib->DefineExport(c_miss_reflection_pass_);
-
-		auto hit_group = raytracing_pipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
-		hit_group->SetClosestHitShaderImport(c_closesthit_reflection_pass_);
-		hit_group->SetHitGroupExport(c_hitgroup_reflection_pass_);
-		hit_group->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
-
-		// Shader config
-		// Defines the maximum sizes in bytes for the ray payload and attribute structure.
-		auto shader_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-		UINT payload_size = 4 * sizeof(float);   // float4 color
-		UINT attribute_size = 2 * sizeof(float); // float2 barycentrics
-		shader_config->Config(payload_size, attribute_size);
-
-		// Local Root Signature
-
-		// GLobal root signature
-		auto global_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-		global_root_signature->SetRootSignature(rt_reflections_pass_global_root_signature_.GetRootSignature().Get());
-
-		// Pipeline config
-		auto pipeline_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-		pipeline_config->Config(1); // Max recusion of rays.
-
-#if _DEBUG
-		PrintStateObjectDesc(raytracing_pipeline);
-#endif
-
-		// Create state object
-		ThrowIfFailed(device->CreateStateObject(raytracing_pipeline, IID_PPV_ARGS(&reflection_pass_state_object_)));
+		ThrowIfFailed(device->CreateStateObject(raytracing_pipeline, IID_PPV_ARGS(&raytracing_pass_state_object_)));
 	}
 
 	// Create the light accumulation pass pipeline state object.
@@ -682,10 +597,10 @@ bool ReflectionsDemo::LoadContent()
 		light_accumulation_pipeline_state_stream.RTVFormats				= light_accumulation_pass_render_target_.GetRenderTargetFormats();
 
 		// Create the pipeline state.
-		D3D12_PIPELINE_STATE_STREAM_DESC composite_pipeline_state_stream_desc = {
+		D3D12_PIPELINE_STATE_STREAM_DESC light_accumulation_pipeline_state_stream_desc = {
 			sizeof(LightAccumulationPipelineStateStream), & light_accumulation_pipeline_state_stream
 		};
-		ThrowIfFailed(device->CreatePipelineState(&composite_pipeline_state_stream_desc, IID_PPV_ARGS(&light_accumulation_pass_pipeline_state_)));
+		ThrowIfFailed(device->CreatePipelineState(&light_accumulation_pipeline_state_stream_desc, IID_PPV_ARGS(&light_accumulation_pass_pipeline_state_)));
 	}
 	
 	// Create the composite pass pipeline state object.
@@ -816,40 +731,27 @@ bool ReflectionsDemo::LoadContent()
 
 	// Create raytracing Shader Tables.
 	{
-		void* raygen_shadows_shader_id;
-		void* miss_shadows_shader_id;
-
-		void* raygen_reflections_shader_id;
-		void* hitgroup_reflections_shader_id;
-		void* miss_reflections_shader_id;
+		void* raygen_shader_id;
+		void* miss_shader_id;
+		void* hitgroup_shader_id;
 
 		auto  GetShaderIdentifiersShadow = [&](auto* state_object_properties)
 		{
-			raygen_shadows_shader_id = state_object_properties->GetShaderIdentifier(c_raygen_shadow_pass_);
-			miss_shadows_shader_id	 = state_object_properties->GetShaderIdentifier(c_miss_shadow_pass_);
+			raygen_shader_id		= state_object_properties->GetShaderIdentifier(c_raygen_shader_);
+			hitgroup_shader_id		= state_object_properties->GetShaderIdentifier(c_hitgroup_);
+			miss_shader_id			= state_object_properties->GetShaderIdentifier(c_miss_shader_);
 		};
-
-		auto GetShaderIdentifiersReflection = [&](auto* state_object_properties)
-		{
-			raygen_reflections_shader_id	= state_object_properties->GetShaderIdentifier(c_raygen_reflection_pass_);
-			hitgroup_reflections_shader_id	= state_object_properties->GetShaderIdentifier(c_hitgroup_reflection_pass_);
-			miss_reflections_shader_id		= state_object_properties->GetShaderIdentifier(c_miss_reflection_pass_);
-		};
-
 		
 		Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> state_object_properties;
-		ThrowIfFailed(shadow_pass_state_object_.As(&state_object_properties));
+		ThrowIfFailed(raytracing_pass_state_object_.As(&state_object_properties));
 		GetShaderIdentifiersShadow(state_object_properties.Get());
-		ThrowIfFailed(reflection_pass_state_object_.As(&state_object_properties));
-		GetShaderIdentifiersReflection(state_object_properties.Get());
 
 		UINT shader_id_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 
 		// RayGen Shader Table
 		{
 			UINT shader_record_size = shader_id_size;		
-			raygen_shader_table_.push_back(ShaderRecord(raygen_shadows_shader_id, shader_id_size));
-			raygen_shader_table_.push_back(ShaderRecord(raygen_reflections_shader_id, shader_id_size));
+			raygen_shader_table_.push_back(ShaderRecord(raygen_shader_id, shader_id_size));
 
 			// Copy shader table to GPU memory.
 			command_list->CopyShaderTable(raygen_shader_table_, shader_record_size, "Raygen ShaderTable");
@@ -857,8 +759,13 @@ bool ReflectionsDemo::LoadContent()
 
 		// Hit Group Shader Table
 		{
-			UINT shader_record_size = shader_id_size;
-			hitgroup_shader_table_.push_back(ShaderRecord(hitgroup_reflections_shader_id, shader_id_size));
+			struct RootArguments
+			{
+				MaterialConstantBuffer Material;
+			};
+	
+			UINT shader_record_size = shader_id_size + sizeof(RootArguments);
+			hitgroup_shader_table_.push_back(ShaderRecord(hitgroup_shader_id, shader_id_size));
 
 			// Copy shader table to GPU memory.
 			command_list->CopyShaderTable(hitgroup_shader_table_, shader_record_size, "Hitgroup ShaderTable");
@@ -867,8 +774,7 @@ bool ReflectionsDemo::LoadContent()
 		// Miss Shader Table
 		{
 			UINT shader_record_size = shader_id_size;
-			miss_shader_table_.push_back(ShaderRecord(miss_shadows_shader_id, shader_id_size));
-			miss_shader_table_.push_back(ShaderRecord(miss_reflections_shader_id, shader_id_size));
+			miss_shader_table_.push_back(ShaderRecord(miss_shader_id, shader_id_size));
 
 			// Copy shader table to GPU memory.
 			command_list->CopyShaderTable(miss_shader_table_, shader_record_size, "Miss ShaderTable");
@@ -988,7 +894,7 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 		{
 			DirectionalLight& l = directional_lights_[i];
 
-			XMVECTOR direction_ws = { -0.57f, 0.87f, 0.47f, 0.0 };
+			XMVECTOR direction_ws = { -0.16f, 0.86f, 0.12f, 0.0 };
 			XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
 
 			XMStoreFloat4(&l.DirectionWS, direction_ws);
@@ -1026,50 +932,51 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 		command_list->SetViewport(geometry_pass_render_target_.GetViewport());
 		command_list->SetScissorRect(scissor_rect_);
 		command_list->SetGraphicsRootSignature(geometry_pass_root_signature_);
+		command_list->SetPipelineState(geometry_pass_pipeline_state_);
 
-		RenderContext render_context
+		command_list->SetGraphicsDynamicStructuredBuffer(GeometryPassRootSignatureParams::Materials, scene_.GetMaterialData());
+
+		// Bind all textures.
+		for(int i = 0; i < scene_.GetTextures().size(); ++i)
 		{
-			*command_list,
-			ShaderOptions::USE_AUTO_COLOR,
-			ShaderOptions::None,
-			geometry_pass_pipeline_state_map_
-		};
-	
+			command_list->SetShaderResourceView(GeometryPassRootSignatureParams::Textures, i, scene_.GetTextures()[i], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		}
+
 		// Loop over all instances of meshes in the scene and render.
 		for (auto& instance : scene_.GetInstances())
 		{
 			Mesh& mesh = scene_.GetMeshes()[instance.MeshIndex];
 			mesh.SetBaseTransform(instance.Transform);
-			mesh.Render(render_context);
+			mesh.Render(*command_list);
 		}
 
 #if DEBUG_
 		// Render light sources.
-		if (visualise_lights_ && scene_.BasicGeometryLoaded())
-		{
-			DirectX::XMMATRIX translation_matrix	= DirectX::XMMatrixIdentity();
-			DirectX::XMMATRIX rotation_matrix		= DirectX::XMMatrixIdentity();
-			DirectX::XMMATRIX scaling_matrix		= DirectX::XMMatrixIdentity();
+		//if (visualise_lights_ && scene_.BasicGeometryLoaded())
+		//{
+		//	DirectX::XMMATRIX translation_matrix	= DirectX::XMMatrixIdentity();
+		//	DirectX::XMMATRIX rotation_matrix		= DirectX::XMMatrixIdentity();
+		//	DirectX::XMMATRIX scaling_matrix		= DirectX::XMMatrixIdentity();
 
-			DirectX::XMMATRIX world_matrix = DirectX::XMMatrixIdentity();
+		//	DirectX::XMMATRIX world_matrix = DirectX::XMMatrixIdentity();
 
-			// Render geometry for point light sources
-			for (const auto& l : point_lights_)
-			{
-				DirectX::XMVECTOR light_position = DirectX::XMLoadFloat4(&l.PositionWS);
-				DirectX::XMVECTOR light_scaling{ 0.1f, 0.1f, 0.1f };
+		//	// Render geometry for point light sources
+		//	for (const auto& l : point_lights_)
+		//	{
+		//		DirectX::XMVECTOR light_position = DirectX::XMLoadFloat4(&l.PositionWS);
+		//		DirectX::XMVECTOR light_scaling{ 0.1f, 0.1f, 0.1f };
 
-				translation_matrix	= DirectX::XMMatrixTranslationFromVector(light_position);
-				scaling_matrix		= DirectX::XMMatrixScalingFromVector(light_scaling);
+		//		translation_matrix	= DirectX::XMMatrixTranslationFromVector(light_position);
+		//		scaling_matrix		= DirectX::XMMatrixScalingFromVector(light_scaling);
 
-				world_matrix = scaling_matrix * rotation_matrix * translation_matrix;
+		//		world_matrix = scaling_matrix * rotation_matrix * translation_matrix;
 
-				scene_.SphereMesh->SetEmissive(DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z));
+		//		scene_.SphereMesh->SetEmissive(DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z));
 
-				scene_.SphereMesh->SetWorldMatrix(world_matrix);
-				scene_.SphereMesh->Render(render_context);
-			}
-		}
+		//		scene_.SphereMesh->SetWorldMatrix(world_matrix);
+		//		scene_.SphereMesh->Render(render_context);
+		//	}
+		//}
 #endif	
 		command_list->EndRenderPass();
 	}
@@ -1090,8 +997,8 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 		dispatch_desc.Height	= height_;
 		dispatch_desc.Depth		= 1;
 
-		command_list->SetComputeRootSignature(rt_shadows_pass_global_root_signature_);
-		command_list->SetStateObject(shadow_pass_state_object_);
+		command_list->SetComputeRootSignature(raytracing_global_root_signature_);
+		command_list->SetStateObject(raytracing_pass_state_object_);
 
 		// Upload lights
 		SceneLightProperties light_props;
@@ -1099,62 +1006,25 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 		light_props.NumSpotLights			= static_cast<uint32_t>(spot_lights_.size());
 		light_props.NumDirectionalLights	= static_cast<uint32_t>(directional_lights_.size());
 	
-		command_list->SetComputeDynamicConstantBuffer(RtShadowsPassGlobalRootSignatureParams::SceneConstantData, scene_buffer_);
-		command_list->SetCompute32BitConstants(RtShadowsPassGlobalRootSignatureParams::LightPropertiesCb, light_props);
-		command_list->SetComputeDynamicStructuredBuffer(RtShadowsPassGlobalRootSignatureParams::PointLights, point_lights_);
-		command_list->SetComputeDynamicStructuredBuffer(RtShadowsPassGlobalRootSignatureParams::SpotLights, spot_lights_);
-		command_list->SetComputeDynamicStructuredBuffer(RtShadowsPassGlobalRootSignatureParams::DirectionalLights, directional_lights_);
-	
-		command_list->SetShaderResourceView(RtShadowsPassGlobalRootSignatureParams::Textures,0,geometry_pass_render_target_.GetTexture(AttachmentPoint::kDepthStencil),D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, &depth_buffer_view_);
-		command_list->SetShaderResourceView(RtShadowsPassGlobalRootSignatureParams::Textures, 1, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor1));
+		command_list->SetComputeDynamicConstantBuffer(RtGlobalRootSignatureParams::SceneConstantData, scene_buffer_);
+		command_list->SetCompute32BitConstants(RtGlobalRootSignatureParams::LightPropertiesCb, light_props);
+		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::PointLights, point_lights_);
+		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::SpotLights, spot_lights_);
+		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::DirectionalLights, directional_lights_);
+
 		
-		command_list->SetComputeAccelerationStructure(RtShadowsPassGlobalRootSignatureParams::AccelerationStructure, top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress());
-		command_list->SetUnorderedAccessView(RtShadowsPassGlobalRootSignatureParams::RenderTarget, 0, shadow_texture_);
+		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 0, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor0));	// Bind albedo.
+		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 1, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor1));	// Bind normal.
+		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 2, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor2));	// Bind metal-rough.
+		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 3, geometry_pass_render_target_.GetTexture(AttachmentPoint::kDepthStencil), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, &depth_buffer_view_);	// Bind depth.
+		
+		command_list->SetComputeAccelerationStructure(RtGlobalRootSignatureParams::AccelerationStructure, top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress());
+		command_list->SetUnorderedAccessView(RtGlobalRootSignatureParams::RenderTarget, 0, raytracing_output_texture_);
 		
 		command_list->DispatchRays(dispatch_desc);
 
 		// Make sure to finish writes to render target.
-		command_list->UAVBarrier(shadow_texture_, true);
-	}
-
-	// Raytraced reflections render pass.
-	{
-		// Bind the heaps, acceleration strucutre and dispatch rays.
-		D3D12_DISPATCH_RAYS_DESC dispatch_desc = {};
-
-		auto alignment = math::AlignUp(raygen_shader_table_.GetShaderRecordSize(), D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-	
-		dispatch_desc.RayGenerationShaderRecord.StartAddress = raygen_shader_table_.GetD3D12Resource()->GetGPUVirtualAddress() + alignment;
-		dispatch_desc.RayGenerationShaderRecord.SizeInBytes  = raygen_shader_table_.GetShaderRecordSize();
-		
-		dispatch_desc.HitGroupTable.StartAddress	= hitgroup_shader_table_.GetD3D12Resource()->GetGPUVirtualAddress();
-		dispatch_desc.HitGroupTable.SizeInBytes		= hitgroup_shader_table_.GetD3D12Resource()->GetDesc().Width;
-		dispatch_desc.HitGroupTable.StrideInBytes	= hitgroup_shader_table_.GetShaderRecordSize();
-		
-		dispatch_desc.MissShaderTable.StartAddress	= miss_shader_table_.GetD3D12Resource()->GetGPUVirtualAddress();
-		dispatch_desc.MissShaderTable.SizeInBytes	= miss_shader_table_.GetD3D12Resource()->GetDesc().Width;
-		dispatch_desc.MissShaderTable.StrideInBytes = miss_shader_table_.GetShaderRecordSize();
-
-		dispatch_desc.Width		= width_;
-		dispatch_desc.Height	= height_;
-		dispatch_desc.Depth		= 1;
-
-		command_list->SetComputeRootSignature(rt_reflections_pass_global_root_signature_);
-		command_list->SetStateObject(reflection_pass_state_object_);
-
-		command_list->SetComputeDynamicConstantBuffer(RtReflectionPassGlobalRootSignatureParams::SceneConstantData, scene_buffer_);
-		
-		command_list->SetShaderResourceView(RtReflectionPassGlobalRootSignatureParams::GBuffer, 0, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor0) );	// Bind albedo.
-		command_list->SetShaderResourceView(RtReflectionPassGlobalRootSignatureParams::GBuffer, 1, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor1));	// Bind normal.
-		command_list->SetShaderResourceView(RtReflectionPassGlobalRootSignatureParams::GBuffer, 2, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor2));	// Bind metal-rough.
-		command_list->SetShaderResourceView(RtReflectionPassGlobalRootSignatureParams::GBuffer, 3, geometry_pass_render_target_.GetTexture(AttachmentPoint::kDepthStencil), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, &depth_buffer_view_);	// Bind depth.
-		
-		command_list->SetUnorderedAccessView(RtReflectionPassGlobalRootSignatureParams::RenderTarget, 0, reflection_texture_);
-
-		command_list->DispatchRays(dispatch_desc);
-
-		//Make sure to finish writes to render target.
-		command_list->UAVBarrier(reflection_texture_, true);
+		command_list->UAVBarrier(raytracing_output_texture_, true);
 	}
 	
 	// Light accumulation render pass.
@@ -1184,7 +1054,7 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 		command_list->SetShaderResourceView(LightAccumulationPassRootSignatureParams::GBuffer, 2, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor2), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);	// Bind metal-rough.
 		command_list->SetShaderResourceView(LightAccumulationPassRootSignatureParams::GBuffer, 3, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor3), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);	// Bind emissive-occlusion.
 		command_list->SetShaderResourceView(LightAccumulationPassRootSignatureParams::GBuffer, 4, geometry_pass_render_target_.GetTexture(AttachmentPoint::kDepthStencil), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &depth_buffer_view_);	// Bind depth.
-		command_list->SetShaderResourceView(LightAccumulationPassRootSignatureParams::GBuffer, 5, shadow_texture_, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		command_list->SetShaderResourceView(LightAccumulationPassRootSignatureParams::GBuffer, 5, raytracing_output_texture_, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		
 		command_list->Draw(3);
 		
@@ -1280,7 +1150,7 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 			g_output_mode.Texture = OutputTexture::DepthTexture;
 			break;
 		case KeyCode::D9:
-			current_display_texture_ = &shadow_texture_;
+			current_display_texture_ = &raytracing_output_texture_;
 			g_output_mode.Texture = OutputTexture::ShadowTexture;
 			break;
 		default:
@@ -1340,6 +1210,6 @@ void ReflectionsDemo::RescaleRenderTargets(float scale)
 	height = clamp<uint32_t>(height, 1, D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
 
 	geometry_pass_render_target_.Resize(width, height);
-	shadow_texture_.Resize(width, height);
+	raytracing_output_texture_.Resize(width, height);
 	light_accumulation_pass_render_target_.Resize(width, height);
 }

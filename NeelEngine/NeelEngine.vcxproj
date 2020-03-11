@@ -97,7 +97,6 @@
     <ClInclude Include="Include\Graphics\D3D12Resources\shader_table.h" />
     <ClInclude Include="Include\Graphics\generate_mips_pso.h" />
     <ClInclude Include="Include\Graphics\GUI.h" />
-    <ClInclude Include="Include\Graphics\render_context.h" />
     <ClInclude Include="Include\ImGui\imconfig.h" />
     <ClInclude Include="Include\ImGui\imgui.h" />
     <ClInclude Include="Include\ImGui\imgui_impl_win32.h" />
@@ -130,7 +129,6 @@
     <ClInclude Include="Include\Graphics\ResourceManagement\resource_state_tracker.h" />
     <ClInclude Include="Include\root_signature.h" />
     <ClInclude Include="Include\Graphics\glTF\gltf_scene.h" />
-    <ClInclude Include="Include\SceneRendering\shader_options.h" />
     <ClInclude Include="Include\texture_usage.h" />
     <ClInclude Include="Include\thread_safe_queue.h" />
     <ClInclude Include="Include\upload_buffer.h" />

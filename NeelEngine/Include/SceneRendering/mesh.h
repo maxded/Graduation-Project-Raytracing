@@ -6,8 +6,6 @@
 #include "commandlist.h"
 #include "material.h"
 
-#include "render_context.h"
-
 #include "gltf.h"
 
 class Mesh
@@ -27,7 +25,15 @@ private:
 		UINT					IndexCount;
 		D3D_PRIMITIVE_TOPOLOGY  Topology;
 
-		Material				Material;
+		Material*				Material;
+
+		struct MaterialBuffer
+		{
+			int MaterialIndex;
+			int Padding0;
+			int Padding1;
+			int Padding2;
+		}MaterialConstantBuffer;
 	};
 public:
 	Mesh();
@@ -38,14 +44,12 @@ public:
 	void SetWorldMatrix(const DirectX::XMFLOAT3& translation, const float rotation_y, float scale);
 	void SetWorldMatrix(const DirectX::XMMATRIX& world_matrix);
 
-	void Render(RenderContext& render_context);
+	void Render(CommandList& command_list);
 
 	static const UINT vertex_slot_		= 0;
 	static const UINT normal_slot_		= 1;
 	static const UINT tangent_slot_		= 2;
 	static const UINT texcoord0_slot_	= 3;
-
-	std::vector<ShaderOptions> RequiredShaderOptions() const;
 
 	std::vector<SubMesh>& GetSubMeshes() { return sub_meshes_; }
 

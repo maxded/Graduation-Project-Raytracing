@@ -102,25 +102,34 @@ struct MeshMaterialData
 	MeshMaterialData()
 		: MeshAutoColor(0.0f, 0.0f, 0.0f, 0.0f)
 		  , BaseColorFactor(0.0f, 0.0f, 0.0f, 0.0f)
+		  , BaseColorIndex(0)
+		  , NormalIndex(0)
+		  , MetalRoughIndex(0)
+		  , OcclusionIndex(0)
+		  , EmissiveIndex(0)
 		  , NormalScale(0.0f)
 		  , RoughnessFactor(0.0f)
 		  , MetallicFactor(0.0f)
 		  , AoStrength(0.0f)
 		  , EmissiveFactor(0.0f, 0.0f, 0.0f)
-		  , Padding(0.0f)
 	{}
 
 	DirectX::XMFLOAT4 MeshAutoColor;
 	//----------------------------------- (16 byte boundary)
 	DirectX::XMFLOAT4 BaseColorFactor;
 	//----------------------------------- (16 byte boundary)
+	int BaseColorIndex;
+	int NormalIndex;
+	int MetalRoughIndex;
+	int OcclusionIndex;
+	//----------------------------------- (16 byte boundary)
+	int EmissiveIndex;	
 	float NormalScale;
 	float RoughnessFactor;
 	float MetallicFactor;
+	//----------------------------------- (16 byte boundary)
 	float AoStrength;
-	//----------------------------------- (16 byte boundary)
 	DirectX::XMFLOAT3 EmissiveFactor;
-	float Padding;
 	//----------------------------------- (16 byte boundary)
-	// Total:                              16 * 4 = 64 bytes 
+	// Total:                              16 * 5 = 80 bytes 
 };

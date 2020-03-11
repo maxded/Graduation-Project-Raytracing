@@ -5,8 +5,6 @@
 #include "gltf_mesh_data.h"
 #include "camera.h"
 
-#include <algorithm>
-
 Mesh::Mesh()
 	: name_("unavailable")
 	  , base_transform_{XMMatrixIdentity()}
@@ -37,23 +35,11 @@ void Mesh::SetWorldMatrix(const DirectX::XMMATRIX& world_matrix)
 	world_matrix_ = world_matrix;
 }
 
-std::vector<ShaderOptions> Mesh::RequiredShaderOptions() const
-{
-	std::vector<ShaderOptions> required_shader_options{};
-
-	for (const auto& submesh : sub_meshes_)
-	{
-		required_shader_options.push_back(submesh.Material.GetShaderOptions());
-	}
-
-	return required_shader_options;
-}
-
 void Mesh::SetEmissive(DirectX::XMFLOAT3 color)
 {
 	for(auto& submesh : sub_meshes_)
 	{
-		submesh.Material.SetEmissive(color);
+		submesh.Material->SetEmissive(color);
 	}
 }
 
@@ -177,12 +163,15 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 		if(mesh.Material() >= 0)
 		{
 			if (scene_materials)
-				submesh.Material = scene_materials->at(mesh.Material());
+			{
+				submesh.Material = &scene_materials->at(mesh.Material());
+				submesh.MaterialConstantBuffer.MaterialIndex = mesh.Material();
+			}			
 		}
 		
 		if(t_buffer.HasData())
 		{
-			submesh.Material.HasTangents();
+			//submesh.Material->HasTangents();
 		}
 	}
 }
@@ -196,7 +185,7 @@ void Mesh::Unload()
 	}
 }
 
-void Mesh::Render(RenderContext& render_context)
+void Mesh::Render(CommandList& command_list)
 {
 	Camera& camera = Camera::Get();
 
@@ -212,38 +201,24 @@ void Mesh::Render(RenderContext& render_context)
 	constant_data_.CameraPosition				= camera.GetTranslation();
 
 	// Bind mesh constant data
-	render_context.CommandList.SetGraphicsDynamicConstantBuffer(1, constant_data_);
+	command_list.SetGraphicsDynamicConstantBuffer(1, constant_data_);
 
 	for (auto& submesh : sub_meshes_)
 	{
-		const ShaderOptions options = (render_context.OverrideOptions == ShaderOptions::None ? submesh.Material.GetShaderOptions() : render_context.OverrideOptions);
-		if (options != render_context.CurrentOptions)
-		{
-			render_context.CommandList.SetPipelineState(render_context.PipelineStateMap[options]);
-			render_context.CurrentOptions = options;
-		}
-
 		// Bind submesh material data
-		render_context.CommandList.SetGraphicsDynamicConstantBuffer(0, submesh.Material.GetMaterialData());
-
-		// Bind PBR textures to pipeline for this submesh.
-		render_context.CommandList.SetShaderResourceView(2, 0, submesh.Material.Albedo(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(2, 1, submesh.Material.Normal(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(2, 2, submesh.Material.MetalRoughness(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(2, 3, submesh.Material.AmbientOcclusion(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		render_context.CommandList.SetShaderResourceView(2, 4, submesh.Material.Emissive(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		command_list.SetGraphicsDynamicConstantBuffer(0, submesh.MaterialConstantBuffer);
 			
-		render_context.CommandList.SetPrimitiveTopology(submesh.Topology);
-		render_context.CommandList.SetVertexBuffer(0, submesh.VBuffer);
+		command_list.SetPrimitiveTopology(submesh.Topology);
+		command_list.SetVertexBuffer(0, submesh.VBuffer);
 
 		if (submesh.IndexCount > 0)
 		{
-			render_context.CommandList.SetIndexBuffer(submesh.IBuffer);
-			render_context.CommandList.DrawIndexed(submesh.IndexCount, 1, 0, 0, 0);
+			command_list.SetIndexBuffer(submesh.IBuffer);
+			command_list.DrawIndexed(submesh.IndexCount, 1, 0, 0, 0);
 		}
 		else
 		{
-			render_context.CommandList.Draw(submesh.VBuffer.GetNumVertices(), 1, 0, 0);
+			command_list.Draw(submesh.VBuffer.GetNumVertices(), 1, 0, 0);
 		}
 	}
 }

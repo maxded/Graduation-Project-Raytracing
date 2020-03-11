@@ -3,25 +3,14 @@
 #include "material.h"
 
 Material::Material()
-	: shader_configurations_()
 {
-	// Create empty textures for rendering purposes.
-	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-	auto resource_desc = CD3DX12_RESOURCE_DESC::Tex2D(format, 360, 240);
-
-	albedo_texture_				= Texture(resource_desc, nullptr, TextureUsage::Albedo, "albedo_texture");
-	normal_texture_				= Texture(resource_desc, nullptr, TextureUsage::Normalmap, "normal_texture");
-	metallic_roughness_texture_ = Texture(resource_desc, nullptr, TextureUsage::MetalRoughnessmap, "metal_rough_texture");
-	ambient_occlusion_texture_	= Texture(resource_desc, nullptr, TextureUsage::AmbientOcclusionmap, "ao_texture");
-	emissive_texture_			= Texture(resource_desc, nullptr, TextureUsage::Emissivemap, "emissive_texture");
 }
 
 Material::~Material()
 {
 }
 
-void Material::Load(const fx::gltf::Document& document, int material_index, CommandList& command_list, const std::string& filename)
+void Material::Load(const fx::gltf::Document& document, int material_index, CommandList& command_list, std::vector<Texture>& texture_store, const std::string& filename)
 {
 	const fx::gltf::Material& material = document.materials[material_index];
 	
@@ -40,12 +29,14 @@ void Material::Load(const fx::gltf::Document& document, int material_index, Comm
 
 		material_data_.EmissiveFactor		= XMFLOAT3(m.emissiveFactor.data());
 
-		ShaderOptions options = ShaderOptions::None;
+		material_data_.BaseColorIndex		= m.pbrMetallicRoughness.baseColorTexture.index;
+		material_data_.NormalIndex			= m.normalTexture.index;
+		material_data_.MetalRoughIndex		= m.pbrMetallicRoughness.metallicRoughnessTexture.index;
+		material_data_.OcclusionIndex		= m.occlusionTexture.index;
+		material_data_.EmissiveIndex		= m.emissiveTexture.index;
 
 		if (m.pbrMetallicRoughness.baseColorTexture.index >= 0)
 		{
-			options |= ShaderOptions::HAS_BASECOLORMAP;
-
 			const fx::gltf::Image& image = document.images[document.textures[m.pbrMetallicRoughness.baseColorTexture.index].source];
 
 			std::string file_name = "";
@@ -53,20 +44,16 @@ void Material::Load(const fx::gltf::Document& document, int material_index, Comm
 			if (!image.uri.empty() && !image.IsEmbeddedResource())
 			{
 				file_name = fx::gltf::detail::GetDocumentRootPath(filename) + "/" + image.uri;
-				command_list.LoadTextureFromFile(albedo_texture_, file_name, TextureUsage::Albedo);
-
+				command_list.LoadTextureFromFile(texture_store[m.pbrMetallicRoughness.baseColorTexture.index], file_name, TextureUsage::Albedo);
 			}
 			else
 			{
 				throw std::exception("embedded glTF textures not supported!");
 			}
-	
 		}
 			
 		if (m.normalTexture.index >= 0)
 		{
-			options |= ShaderOptions::HAS_NORMALMAP;
-
 			const fx::gltf::Image& image = document.images[document.textures[m.normalTexture.index].source];
 
 			std::string file_name = "";
@@ -74,8 +61,7 @@ void Material::Load(const fx::gltf::Document& document, int material_index, Comm
 			if (!image.uri.empty() && !image.IsEmbeddedResource())
 			{
 				file_name = fx::gltf::detail::GetDocumentRootPath(filename) + "/" + image.uri;
-				command_list.LoadTextureFromFile(normal_texture_, file_name, TextureUsage::Normalmap);
-
+				command_list.LoadTextureFromFile(texture_store[m.normalTexture.index], file_name, TextureUsage::Normalmap);
 			}
 			else
 			{
@@ -85,8 +71,6 @@ void Material::Load(const fx::gltf::Document& document, int material_index, Comm
 			
 		if (m.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
 		{
-			options |= ShaderOptions::HAS_METALROUGHNESSMAP;
-
 			const fx::gltf::Image& image = document.images[document.textures[m.pbrMetallicRoughness.metallicRoughnessTexture.index].source];
 
 			std::string file_name = "";
@@ -94,7 +78,7 @@ void Material::Load(const fx::gltf::Document& document, int material_index, Comm
 			if (!image.uri.empty() && !image.IsEmbeddedResource())
 			{
 				file_name = fx::gltf::detail::GetDocumentRootPath(filename) + "/" + image.uri;
-				command_list.LoadTextureFromFile(metallic_roughness_texture_, file_name, TextureUsage::MetalRoughnessmap);
+				command_list.LoadTextureFromFile(texture_store[m.pbrMetallicRoughness.metallicRoughnessTexture.index], file_name, TextureUsage::MetalRoughnessmap);
 
 			}
 			else
@@ -105,43 +89,15 @@ void Material::Load(const fx::gltf::Document& document, int material_index, Comm
 			
 		if (m.occlusionTexture.index >= 0)
 		{
-			options |= ShaderOptions::HAS_OCCLUSIONMAP;
-
-			if (m.occlusionTexture.index == m.pbrMetallicRoughness.metallicRoughnessTexture.index)
-			{
-				options |= ShaderOptions::HAS_OCCLUSIONMAP_COMBINED;
-			}
-			else
-			{
-				const fx::gltf::Image& image = document.images[document.textures[m.occlusionTexture.index].source];
-
-				std::string file_name = "";
-
-				if (!image.uri.empty() && !image.IsEmbeddedResource())
-				{
-					file_name = fx::gltf::detail::GetDocumentRootPath(filename) + "/" + image.uri;
-					command_list.LoadTextureFromFile(ambient_occlusion_texture_, file_name, TextureUsage::AmbientOcclusionmap);
-
-				}
-				else
-				{
-					throw std::exception("embedded glTF textures not supported!");
-				}
-			}
-		}
 		
-		if (m.emissiveTexture.index >= 0)
-		{
-			options |= ShaderOptions::HAS_EMISSIVEMAP;
-
-			const fx::gltf::Image& image = document.images[document.textures[m.emissiveTexture.index].source];
+			const fx::gltf::Image& image = document.images[document.textures[m.occlusionTexture.index].source];
 
 			std::string file_name = "";
 
 			if (!image.uri.empty() && !image.IsEmbeddedResource())
 			{
 				file_name = fx::gltf::detail::GetDocumentRootPath(filename) + "/" + image.uri;
-				command_list.LoadTextureFromFile(emissive_texture_, file_name, TextureUsage::Emissivemap);
+				command_list.LoadTextureFromFile(texture_store[m.occlusionTexture.index], file_name, TextureUsage::AmbientOcclusionmap);
 
 			}
 			else
@@ -149,13 +105,28 @@ void Material::Load(const fx::gltf::Document& document, int material_index, Comm
 				throw std::exception("embedded glTF textures not supported!");
 			}
 		}
-			
-		shader_configurations_ = options;
+		
+		if (m.emissiveTexture.index >= 0)
+		{
+			const fx::gltf::Image& image = document.images[document.textures[m.emissiveTexture.index].source];
+
+			std::string file_name = "";
+
+			if (!image.uri.empty() && !image.IsEmbeddedResource())
+			{
+				file_name = fx::gltf::detail::GetDocumentRootPath(filename) + "/" + image.uri;
+				command_list.LoadTextureFromFile(texture_store[m.emissiveTexture.index], file_name, TextureUsage::Emissivemap);
+
+			}
+			else
+			{
+				throw std::exception("embedded glTF textures not supported!");
+			}
+		}	
 	}
 	else
 	{
 		// Use a default material
-		shader_configurations_			= ShaderOptions::None;
 		material_data_.BaseColorFactor	= DirectX::XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 		material_data_.MetallicFactor	= 0;
 		material_data_.RoughnessFactor	= 0.5f;

@@ -11,7 +11,6 @@
 #include <Windows.h> // For HRESULT
 #include <comdef.h> // For _com_error class (used to decode HR result codes).
 
-#include "shader_options.h"
 #include "d3dx12.h"
 
 // From DXSampleHelper.h 
@@ -367,24 +366,6 @@ inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShader(std::wstring const& filena
 	}
 
 	return byte_code;
-}
-
-inline Microsoft::WRL::ComPtr<ID3DBlob> CompileShaderPerumutation(std::string const& entry_point, ShaderOptions options)
-{
-	// Keep rooted until compile completes since D3D_SHADER_MACRO is just a view over this data...
-	std::vector<std::string> defines = GetShaderDefines(options | ShaderOptions::None);
-
-	std::vector<D3D_SHADER_MACRO> shader_defines;
-	for (auto const& define : defines)
-	{
-		shader_defines.emplace_back(D3D_SHADER_MACRO{ define.c_str(), "1" });
-	}
-
-	shader_defines.emplace_back(D3D_SHADER_MACRO{ nullptr, nullptr });
-
-	Microsoft::WRL::ComPtr<ID3DBlob> permutated_pixel_shader = CompileShader(L"Shaders/GeometryPass_PS.hlsl", entry_point, "ps_5_1", shader_defines.data());
-
-	return permutated_pixel_shader;
 }
 
 // Pretty-print a state object tree.
