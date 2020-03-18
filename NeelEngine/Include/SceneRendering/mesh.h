@@ -26,14 +26,9 @@ private:
 		D3D_PRIMITIVE_TOPOLOGY  Topology;
 
 		Material*				Material;
+		MaterialConstantBuffer	MaterialCB;
 
-		struct MaterialBuffer
-		{
-			int MaterialIndex;
-			int Padding0;
-			int Padding1;
-			int Padding2;
-		}MaterialConstantBuffer;
+		bool HasTangents;
 	};
 public:
 	Mesh();

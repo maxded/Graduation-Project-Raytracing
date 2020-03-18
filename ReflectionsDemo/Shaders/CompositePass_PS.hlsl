@@ -13,6 +13,7 @@
 #define TM_Occlusion	6
 #define TM_Depth		7
 #define TM_Shadows		8
+#define TM_Reflections  9
 
 struct TonemapParameters
 {
@@ -162,7 +163,10 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 		output = DoDepth(texture_sample.r);
 		break;
 	case TM_Shadows:
-		output = float4(texture_sample.r, texture_sample.r, texture_sample.r, 1.0);
+		output = float4(texture_sample.w, texture_sample.w, texture_sample.w, 1.0);
+		break;
+	case TM_Reflections:
+		output = float4(texture_sample.rgb, 1.0);
 		break;
 	}
 

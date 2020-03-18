@@ -32,7 +32,7 @@ void Scene::LoadFromFile(const std::string& filename, CommandList& command_list,
 		materials_.resize(document.materials.size());
 		material_data_.resize(document.materials.size());
 		textures_.resize(document.textures.size());
-		
+	
 		for(int i = 0; i < document.materials.size(); i++)
 		{
 			const fx::gltf::Material& material = document.materials[i];

@@ -10,6 +10,9 @@ public:
 	ByteAddressBuffer(const D3D12_RESOURCE_DESC& res_desc,
 	                  size_t num_elements, size_t element_size,
 	                  const std::string& name = "Byte Address Buffer");
+	ByteAddressBuffer(const D3D12_RESOURCE_DESC& res_desc,
+					  size_t buffer_size,
+					  const std::string& name = "Byte Address Buffer");
 
 	size_t GetBufferSize() const
 	{

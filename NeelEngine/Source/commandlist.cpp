@@ -187,6 +187,20 @@ void CommandList::ResolveSubresource(Resource& dst_res, const Resource& src_res,
 	TrackResource(dst_res);
 }
 
+void CommandList::CopyBufferRegion(Buffer& dst_buffer, UINT64 dst_offset, Buffer& src_buffer, UINT64 src_offset,
+	UINT64 num_bytes)
+{
+	TransitionBarrier(dst_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+	TransitionBarrier(src_buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+	FlushResourceBarriers();
+	
+	d3d12_command_list_->CopyBufferRegion(dst_buffer.GetD3D12Resource().Get(), dst_offset, src_buffer.GetD3D12Resource().Get(), src_offset, num_bytes);
+
+	TrackResource(src_buffer);
+	TrackResource(dst_buffer);
+}
+
 
 void CommandList::CopyBuffer(Buffer& buffer, size_t num_elements, size_t element_size, const void* buffer_data,
                              D3D12_RESOURCE_FLAGS flags)
@@ -828,6 +842,11 @@ void CommandList::SetComputeDynamicStructuredBuffer(uint32_t slot, size_t num_el
 	memcpy(heap_allocation.CPU, buffer_data, buffer_size);
 
 	d3d12_command_list_->SetComputeRootShaderResourceView(slot, heap_allocation.GPU);
+}
+
+void CommandList::SetComputeByteAddressBuffer(uint32_t slot, D3D12_GPU_VIRTUAL_ADDRESS address)
+{
+	d3d12_command_list_->SetComputeRootShaderResourceView(slot, address);
 }
 
 void CommandList::SetVertexBuffer(uint32_t slot, const VertexBuffer& vertex_buffer)

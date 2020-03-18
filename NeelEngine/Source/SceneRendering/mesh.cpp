@@ -165,13 +165,13 @@ void Mesh::Load(const fx::gltf::Document& doc, std::size_t mesh_index, CommandLi
 			if (scene_materials)
 			{
 				submesh.Material = &scene_materials->at(mesh.Material());
-				submesh.MaterialConstantBuffer.MaterialIndex = mesh.Material();
+				submesh.MaterialCB.MaterialIndex = mesh.Material();
 			}			
 		}
 		
 		if(t_buffer.HasData())
 		{
-			//submesh.Material->HasTangents();
+			submesh.HasTangents = true;
 		}
 	}
 }
@@ -198,7 +198,6 @@ void Mesh::Render(CommandList& command_list)
 	constant_data_.ModelViewMatrix				= model_view;
 	constant_data_.InverseTransposeModelMatrix	= inverse_transpose_model;
 	constant_data_.ModelViewProjectionMatrix	= model_view_projection;
-	constant_data_.CameraPosition				= camera.GetTranslation();
 
 	// Bind mesh constant data
 	command_list.SetGraphicsDynamicConstantBuffer(1, constant_data_);
@@ -206,7 +205,7 @@ void Mesh::Render(CommandList& command_list)
 	for (auto& submesh : sub_meshes_)
 	{
 		// Bind submesh material data
-		command_list.SetGraphicsDynamicConstantBuffer(0, submesh.MaterialConstantBuffer);
+		command_list.SetGraphicsDynamicConstantBuffer(0, submesh.MaterialCB);
 			
 		command_list.SetPrimitiveTopology(submesh.Topology);
 		command_list.SetVertexBuffer(0, submesh.VBuffer);

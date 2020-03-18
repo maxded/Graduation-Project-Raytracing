@@ -7,6 +7,7 @@
 
 #include "shader_table.h"
 #include "acceleration_structure.h"
+#include "byte_address_buffer.h"
 
 class ReflectionsDemo : public Game
 {
@@ -135,8 +136,44 @@ private:
 
 	SceneConstantBuffer scene_buffer_;
 
-	struct MaterialConstantBuffer
+	struct MeshInfoIndex
 	{
-		UINT MaterialIndex;
+		int MeshId;
 	};
+
+	ByteAddressBuffer global_vertices_;
+	ByteAddressBuffer global_indices_;
+
+	struct MeshInfo
+	{
+		MeshInfo()
+			: IndicesOffset(0)
+			, PositionAttributeOffset(0)
+			, NormalAttributeOffset(0)
+			, TangentAttributeOffset(0)
+			, UvAttributeOffset(0)
+			, PositionStride(0)
+			, NormalStride(0)
+			, TangentStride(0)
+			, UvStride(0)
+			, HasTangents(false)
+			, MaterialId(-1)
+		{}
+
+		UINT IndicesOffset;
+		UINT PositionAttributeOffset;
+		UINT NormalAttributeOffset;
+		UINT TangentAttributeOffset;
+		UINT UvAttributeOffset;
+
+		UINT PositionStride;
+		UINT NormalStride;
+		UINT TangentStride;
+		UINT UvStride;
+		
+		bool HasTangents;
+		int MaterialId;
+	};
+
+	std::vector<MeshInfo> mesh_infos_;
 };

@@ -16,7 +16,13 @@ ByteAddressBuffer::ByteAddressBuffer(const D3D12_RESOURCE_DESC& res_desc,
                                      size_t num_elements, size_t element_size,
                                      const std::string& name)
 	: Buffer(res_desc, num_elements, element_size, name)
-	, buffer_size_(0)
+	, buffer_size_(num_elements * element_size)
+{
+}
+
+ByteAddressBuffer::ByteAddressBuffer(const D3D12_RESOURCE_DESC& res_desc, size_t buffer_size, const std::string& name)
+	: Buffer(res_desc, 0, 0, name)
+	, buffer_size_(buffer_size)
 {
 }
 

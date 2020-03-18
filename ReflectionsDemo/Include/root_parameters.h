@@ -47,8 +47,13 @@ namespace RtGlobalRootSignatureParams
 		PointLights,			// StructuredBuffer<PointLight> PointLights				: register( t0 );
 		SpotLights,				// StructuredBuffer<SpotLight> SpotLights				: register( t1 );
 		DirectionalLights,		// StructuredBuffer<DirectionalLight> DirectionalLights : register( t2 );
-		AccelerationStructure,	// RaytracingAccelerationStructure Scene				: register( t3 );
-		GBuffer,				// Texture2D GBuffer[2]								: register( t4 );
+		Materials,				// StructuredBuffer<MaterialData> g_Materials			: register( t3 );
+		AccelerationStructure,	// RaytracingAccelerationStructure Scene				: register( t4 );
+		MeshInfo,				// StructuredBuffer<MeshInfo> g_MeshInfo				: register( t5 );
+		Attributes,				// ByteAddressBuffer<MeshInfo> g_Attributes				: register( t6 );
+		Indices,				// ByteAddressBuffer<MeshInfo> g_Indices				: register( t7 );
+		GBuffer,				// Texture2D GBuffer[4]									: register( t8 );
+		Textures,			
 		NumRootParameters
 	};
 }
@@ -57,7 +62,8 @@ namespace RtLocalRootSignatureParams
 {
 	enum
 	{
-		MaterialConstantBuffer = 0,
-		NumRootParameters
+		MeshInfoIndex = 0,	// ConstantBuffer<MeshIndex> MeshIndexCB	: register( b2 );
+		NumRootParameters,
 	};
 }
+

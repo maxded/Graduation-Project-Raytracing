@@ -199,8 +199,6 @@ void Texture::CreateViews()
 			const float clear_color[]{ 0.4f, 0.6f, 0.9f, 1.0f };
 			CD3DX12_CLEAR_VALUE clear_value{ desc.Format, clear_color };
 			
-
-
 			D3D12_RENDER_PASS_BEGINNING_ACCESS beginning_access { D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR, { clear_value } };
 			D3D12_RENDER_PASS_ENDING_ACCESS ending_access{ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE, {} };
 

@@ -118,6 +118,10 @@ public:
 	void ResolveSubresource(Resource& dst_res, const Resource& src_res, uint32_t dst_subresource = 0,
 	                        uint32_t src_subresource = 0);
 
+	// Copy gpu buffer region to other gpu buffer.
+	void CopyBufferRegion(Buffer& dst_buffer, UINT64 dst_offset, Buffer& src_buffer, UINT64 src_offset, UINT64 num_bytes);
+
+	
 	// Copy the contents of a CPU buffer to a GPU buffer (possibly replacing the previous buffer contents).
 	void CopyBuffer(Buffer& buffer, size_t num_elements, size_t element_size, const void* buffer_data,
 	                D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
@@ -276,7 +280,8 @@ public:
 		SetComputeDynamicStructuredBuffer(slot, buffer_data.size(), sizeof(T), buffer_data.data());
 	}
 
-	
+	void SetComputeByteAddressBuffer(uint32_t slot, D3D12_GPU_VIRTUAL_ADDRESS address);
+
 	/**
 	 * Set the vertex buffer to the rendering pipeline.
 	 */

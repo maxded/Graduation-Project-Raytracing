@@ -5,7 +5,7 @@
 struct MaterialConstantBuffer
 {
 	int MaterialIndex;
-	int3 Padding;
+	float3 Padding;
 };
 
 struct MaterialData
@@ -40,9 +40,7 @@ struct MeshConstantData
 	//----------------------------------- (64 byte boundary)
 	float4x4 ModelViewProjectionMatrix;
 	//----------------------------------- (64 byte boundary)
-	float4 CameraPosition;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              64 * 4 + 16 = 272 bytes
+	// Total:                              64 * 4 + 16 = 256 bytes
 };
 
 
@@ -104,7 +102,7 @@ PixelShaderOutput main(PixelShaderInput IN)
 
 	if (material.BaseColorIndex >= 0)
 	{
-		base_color = Textures[material.BaseColorIndex].Sample(LinearRepeatSampler, IN.TexCoord) *material.BaseColorFactor;
+		base_color = Textures[material.BaseColorIndex].Sample(LinearRepeatSampler, IN.TexCoord);// *material.BaseColorFactor;
 	}
 	else 
 	{

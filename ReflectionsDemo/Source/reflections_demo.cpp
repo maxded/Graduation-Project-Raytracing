@@ -88,7 +88,8 @@ enum OutputTexture
 	EmissiveTexture,
 	OcclusionTexture,
 	DepthTexture,
-	ShadowTexture
+	RayTracedShadowsTexture,
+	RayTracedReflectionsTexture
 };
 
 struct OutputMode
@@ -375,7 +376,10 @@ bool ReflectionsDemo::LoadContent()
 		uav_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 
 		CD3DX12_DESCRIPTOR_RANGE1 srv_descriptor;
-		srv_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 4);
+		srv_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 8);
+
+		CD3DX12_DESCRIPTOR_RANGE1 textures_descriptor;
+		textures_descriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, scene_.GetTextures().size(), 12);
 
 		CD3DX12_ROOT_PARAMETER1 root_parameters[RtGlobalRootSignatureParams::NumRootParameters];
 		root_parameters[RtGlobalRootSignatureParams::RenderTarget].InitAsDescriptorTable(1, &uav_descriptor);
@@ -384,9 +388,14 @@ bool ReflectionsDemo::LoadContent()
 		root_parameters[RtGlobalRootSignatureParams::PointLights].InitAsShaderResourceView(0);
 		root_parameters[RtGlobalRootSignatureParams::SpotLights].InitAsShaderResourceView(1);
 		root_parameters[RtGlobalRootSignatureParams::DirectionalLights].InitAsShaderResourceView(2);
+		root_parameters[RtGlobalRootSignatureParams::Materials].InitAsShaderResourceView(3);
+		root_parameters[RtGlobalRootSignatureParams::AccelerationStructure].InitAsShaderResourceView(4);
+		root_parameters[RtGlobalRootSignatureParams::MeshInfo].InitAsShaderResourceView(5);
+		root_parameters[RtGlobalRootSignatureParams::Attributes].InitAsShaderResourceView(6);
+		root_parameters[RtGlobalRootSignatureParams::Indices].InitAsShaderResourceView(7);
 		root_parameters[RtGlobalRootSignatureParams::GBuffer].InitAsDescriptorTable(1, &srv_descriptor);
-		root_parameters[RtGlobalRootSignatureParams::AccelerationStructure].InitAsShaderResourceView(3);
-
+		root_parameters[RtGlobalRootSignatureParams::Textures].InitAsDescriptorTable(1, &textures_descriptor);
+	
 		CD3DX12_STATIC_SAMPLER_DESC point_clamp_sampler(
 			0,
 			D3D12_FILTER_MIN_MAG_MIP_POINT,
@@ -403,7 +412,7 @@ bool ReflectionsDemo::LoadContent()
 	// Create raytracing local root signature.
 	{
 		CD3DX12_ROOT_PARAMETER1 root_parameters[RtLocalRootSignatureParams::NumRootParameters];
-		root_parameters[RtLocalRootSignatureParams::MaterialConstantBuffer].InitAsConstants(sizeof(MaterialConstantBuffer) / 4, 3, 0);
+		root_parameters[RtLocalRootSignatureParams::MeshInfoIndex].InitAsConstants(sizeof(MeshInfoIndex) / 4, 2, 0);
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
 		root_signature_description.Init_1_1(RtLocalRootSignatureParams::NumRootParameters, root_parameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE);
@@ -515,7 +524,7 @@ bool ReflectionsDemo::LoadContent()
 		
 	}
 
-	// Create raytracing shadows pipeline state object.
+	// Create raytracing pipeline state object.
 	{
 		CD3DX12_STATE_OBJECT_DESC raytracing_pipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
 
@@ -538,10 +547,10 @@ bool ReflectionsDemo::LoadContent()
 		// Defines the maximum sizes in bytes for the ray payload and attribute structure.
 		auto shader_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
 		UINT payload_size	= 4 * sizeof(float);   // float4 color
-		UINT attribute_size = 2 * sizeof(float); // float2 barycentrics
+		UINT attribute_size = 2 * sizeof(float);  // float2 barycentrics
 		shader_config->Config(payload_size, attribute_size);
 
-		// Local Root Signature
+		// Local root signature.
 		auto local_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
 		local_root_signature->SetRootSignature(raytracing_local_root_signature_.GetRootSignature().Get());
 		// Define explicit shader association for the local root signature. 
@@ -550,14 +559,14 @@ bool ReflectionsDemo::LoadContent()
 			root_signature_association->SetSubobjectToAssociate(*local_root_signature);
 			root_signature_association->AddExport(c_hitgroup_);
 		}
-
+		
 		// GLobal root signature
 		auto global_root_signature = raytracing_pipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
 		global_root_signature->SetRootSignature(raytracing_global_root_signature_.GetRootSignature().Get());
 
 		// Pipeline config
 		auto pipeline_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-		pipeline_config->Config(1); // Max recusion of rays.
+		pipeline_config->Config(2); // Max recusion of rays.
 
 #if _DEBUG
 		PrintStateObjectDesc(raytracing_pipeline);
@@ -644,11 +653,14 @@ bool ReflectionsDemo::LoadContent()
 	// Raytracing.
 	//=============================================================================
 
-	
 	// Create Acceleration Structures.
 	{
 		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descs(scene_.GetTotalMeshes());
 
+		// Variables to be used later.
+		size_t total_geometry_vertex_buffer_size = 0;
+		size_t total_geometry_index_buffer_size = 0;
+		
 		int index = 0;
 		for (auto& geometry : scene_.GetMeshes())
 		{
@@ -674,6 +686,9 @@ bool ReflectionsDemo::LoadContent()
 				geometry_descs[index].Triangles.VertexBuffer.StrideInBytes = submesh.VBuffer.GetVertexBufferViews()[0].StrideInBytes;
 				geometry_descs[index].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
+				total_geometry_vertex_buffer_size += submesh.VBuffer.GetD3D12Resource()->GetDesc().Width;
+				total_geometry_index_buffer_size += submesh.IBuffer.GetD3D12Resource()->GetDesc().Width;
+				
 				index++;
 			}
 		}
@@ -727,8 +742,68 @@ bool ReflectionsDemo::LoadContent()
 		command_list->GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&bottom_level_build_desc, 0, nullptr);
 		command_list->UAVBarrier(bottom_level_acceleration_structure_, true);
 		command_list->GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&top_level_build_desc, 0, nullptr);
-	}
 
+
+		// Generate mesh shader data for raytracing.
+		{
+			auto vertex_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(total_geometry_vertex_buffer_size);
+			auto index_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(total_geometry_index_buffer_size);
+			
+			global_vertices_ = ByteAddressBuffer(vertex_buffer_desc, total_geometry_vertex_buffer_size, "Global Vertex Buffer Byte Address Buffer");
+			global_indices_ = ByteAddressBuffer(index_buffer_desc, total_geometry_index_buffer_size, "Global Index Buffer Byte Address Buffer");
+
+			UINT64 vertex_offset = 0;
+			UINT64 index_offset = 0;
+			
+			UINT attribute_offset = 0;
+			
+			for (auto& geometry : scene_.GetMeshes())
+			{
+				for (auto& submesh : geometry.GetSubMeshes())
+				{
+					MeshInfo info;
+					info.IndicesOffset = index_offset;	// Start address of current mesh's index buffer in contiguous index buffer.
+					
+					info.PositionAttributeOffset = attribute_offset;
+					info.PositionStride = submesh.VBuffer.GetVertexBufferViews()[0].StrideInBytes;
+					attribute_offset += submesh.VBuffer.GetVertexBufferViews()[0].SizeInBytes; // Position attribute offset to normal.
+					
+					info.NormalAttributeOffset = attribute_offset;
+					info.NormalStride = submesh.VBuffer.GetVertexBufferViews()[1].StrideInBytes;
+					attribute_offset += submesh.VBuffer.GetVertexBufferViews()[1].SizeInBytes; // Normal attribute offset to tangent or uv.
+					
+					if(submesh.HasTangents)
+					{
+						info.HasTangents = true;
+						info.TangentAttributeOffset = attribute_offset;
+						info.TangentStride = submesh.VBuffer.GetVertexBufferViews()[2].StrideInBytes;
+						attribute_offset += submesh.VBuffer.GetVertexBufferViews()[2].SizeInBytes; // Tangent attribute offset to uv.
+					}
+					else
+					{
+						info.HasTangents = false;
+						info.TangentAttributeOffset = attribute_offset;
+					}
+
+					info.UvAttributeOffset = attribute_offset;
+					info.UvStride = submesh.VBuffer.GetVertexBufferViews()[3].StrideInBytes;
+					attribute_offset += submesh.VBuffer.GetVertexBufferViews()[3].SizeInBytes; // UV attribute offset to end of buffer / begin next buffer.
+
+					info.MaterialId = submesh.MaterialCB.MaterialIndex;
+									
+					mesh_infos_.emplace_back(info);
+
+					// Copy sumesh's buffers to the global contiguous buffers used for raytracing.
+					command_list->CopyBufferRegion(global_vertices_, vertex_offset, submesh.VBuffer, 0, submesh.VBuffer.GetD3D12Resource()->GetDesc().Width);
+					command_list->CopyBufferRegion(global_indices_, index_offset, submesh.IBuffer, 0, submesh.IBuffer.GetD3D12Resource()->GetDesc().Width);
+					
+					vertex_offset += submesh.VBuffer.GetD3D12Resource()->GetDesc().Width;
+					index_offset += submesh.IBuffer.GetD3D12Resource()->GetDesc().Width;
+				}
+			}
+		}	
+	}
+	
 	// Create raytracing Shader Tables.
 	{
 		void* raygen_shader_id;
@@ -761,12 +836,25 @@ bool ReflectionsDemo::LoadContent()
 		{
 			struct RootArguments
 			{
-				MaterialConstantBuffer Material;
+				MeshInfoIndex MeshInfo;
 			};
-	
+			
 			UINT shader_record_size = shader_id_size + sizeof(RootArguments);
-			hitgroup_shader_table_.push_back(ShaderRecord(hitgroup_shader_id, shader_id_size));
+			std::vector<RootArguments> arguments(scene_.GetTotalMeshes());
+	
+			int index = 0;
+			for (auto& geometry : scene_.GetMeshes())
+			{
+				for (auto& submesh : geometry.GetSubMeshes())
+				{	
+					arguments[index].MeshInfo.MeshId = index;
+					
+					hitgroup_shader_table_.push_back(ShaderRecord(hitgroup_shader_id, shader_id_size, &arguments[index], sizeof(RootArguments)));
 
+					index++;
+				}
+			}
+			
 			// Copy shader table to GPU memory.
 			command_list->CopyShaderTable(hitgroup_shader_table_, shader_record_size, "Hitgroup ShaderTable");
 		}
@@ -988,6 +1076,10 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 
 		dispatch_desc.RayGenerationShaderRecord.StartAddress = raygen_shader_table_.GetD3D12Resource()->GetGPUVirtualAddress();
 		dispatch_desc.RayGenerationShaderRecord.SizeInBytes  = raygen_shader_table_.GetShaderRecordSize();
+
+		dispatch_desc.HitGroupTable.StartAddress	= hitgroup_shader_table_.GetD3D12Resource()->GetGPUVirtualAddress();
+		dispatch_desc.HitGroupTable.SizeInBytes		= hitgroup_shader_table_.GetD3D12Resource()->GetDesc().Width;
+		dispatch_desc.HitGroupTable.StrideInBytes	= hitgroup_shader_table_.GetShaderRecordSize();
 		
 		dispatch_desc.MissShaderTable.StartAddress	= miss_shader_table_.GetD3D12Resource()->GetGPUVirtualAddress();
 		dispatch_desc.MissShaderTable.SizeInBytes	= miss_shader_table_.GetD3D12Resource()->GetDesc().Width;
@@ -1008,15 +1100,26 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 	
 		command_list->SetComputeDynamicConstantBuffer(RtGlobalRootSignatureParams::SceneConstantData, scene_buffer_);
 		command_list->SetCompute32BitConstants(RtGlobalRootSignatureParams::LightPropertiesCb, light_props);
+		
 		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::PointLights, point_lights_);
 		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::SpotLights, spot_lights_);
 		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::DirectionalLights, directional_lights_);
+		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::Materials, scene_.GetMaterialData());
+		command_list->SetComputeDynamicStructuredBuffer(RtGlobalRootSignatureParams::MeshInfo, mesh_infos_);
 
-		
+		command_list->SetComputeByteAddressBuffer(RtGlobalRootSignatureParams::Attributes, global_vertices_.GetD3D12Resource()->GetGPUVirtualAddress());
+		command_list->SetComputeByteAddressBuffer(RtGlobalRootSignatureParams::Indices, global_indices_.GetD3D12Resource()->GetGPUVirtualAddress());
+
 		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 0, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor0));	// Bind albedo.
 		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 1, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor1));	// Bind normal.
 		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 2, geometry_pass_render_target_.GetTexture(AttachmentPoint::kColor2));	// Bind metal-rough.
 		command_list->SetShaderResourceView(RtGlobalRootSignatureParams::GBuffer, 3, geometry_pass_render_target_.GetTexture(AttachmentPoint::kDepthStencil), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, &depth_buffer_view_);	// Bind depth.
+
+		// Bind all textures.
+		for (int i = 0; i < scene_.GetTextures().size(); ++i)
+		{
+			command_list->SetShaderResourceView(RtGlobalRootSignatureParams::Textures, i, scene_.GetTextures()[i]);
+		}
 		
 		command_list->SetComputeAccelerationStructure(RtGlobalRootSignatureParams::AccelerationStructure, top_level_acceleration_structure_.GetD3D12Resource()->GetGPUVirtualAddress());
 		command_list->SetUnorderedAccessView(RtGlobalRootSignatureParams::RenderTarget, 0, raytracing_output_texture_);
@@ -1151,8 +1254,11 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 			break;
 		case KeyCode::D9:
 			current_display_texture_ = &raytracing_output_texture_;
-			g_output_mode.Texture = OutputTexture::ShadowTexture;
+			g_output_mode.Texture = OutputTexture::RayTracedShadowsTexture;
 			break;
+		case KeyCode::D0:
+			current_display_texture_ = &raytracing_output_texture_;
+			g_output_mode.Texture = OutputTexture::RayTracedReflectionsTexture;
 		default:
 			break;
 	}

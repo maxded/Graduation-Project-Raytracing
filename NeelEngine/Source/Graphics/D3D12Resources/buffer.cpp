@@ -13,3 +13,5 @@ Buffer::Buffer(const D3D12_RESOURCE_DESC& res_desc,
 	: Resource(res_desc, nullptr, name)
 {
 }
+
+

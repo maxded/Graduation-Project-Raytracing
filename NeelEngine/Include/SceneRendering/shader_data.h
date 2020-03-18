@@ -92,9 +92,7 @@ struct MeshConstantData
 	//----------------------------------- (64 byte boundary)
 	DirectX::XMMATRIX ModelViewProjectionMatrix;
 	//----------------------------------- (64 byte boundary)
-	DirectX::XMVECTOR CameraPosition;
-	//----------------------------------- (16 byte boundary)
-	// Total:                              64 * 4 + 16 = 272 bytes
+	// Total:                              64 * 4 = 256 bytes
 };
 
 struct MeshMaterialData
@@ -132,4 +130,12 @@ struct MeshMaterialData
 	DirectX::XMFLOAT3 EmissiveFactor;
 	//----------------------------------- (16 byte boundary)
 	// Total:                              16 * 5 = 80 bytes 
+};
+
+struct MaterialConstantBuffer
+{
+	int MaterialIndex;
+	DirectX::XMFLOAT3 padding;
+	//----------------------------------- (16 byte boundary)
+	// Total:                              16 * 1 = 16 bytes 
 };
