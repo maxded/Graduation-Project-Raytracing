@@ -166,7 +166,7 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 		output = float4(texture_sample.w, texture_sample.w, texture_sample.w, 1.0);
 		break;
 	case TM_Reflections:
-		output = float4(texture_sample.rgb, 1.0);
+		output = texture_sample;
 		break;
 	}
 

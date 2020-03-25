@@ -23,6 +23,9 @@ struct SceneData
 {
 	float4x4 InverseViewProj;
 	float4 CameraPosition;
+	float VFOV;
+	float PixelHeight;
+	float2 Padding;
 };
 
 struct PointLight
@@ -142,6 +145,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
 
 	return num / denom;
 }
+
 float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 {
 	float NdotV = max(dot(N, V), 0.0);
@@ -157,3 +161,7 @@ float3 fresnelSchlick(float cosTheta, float3 F0)
 	return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+float RoughnessContribution(float x, float x0, float s0)
+{
+	return (1.0 / (tanh((0.0 - x0) * s0) - tanh((1 - x0) * s0))) * (tanh((x - x0) * s0) - tanh((1.0 - x0) * s0));
+}

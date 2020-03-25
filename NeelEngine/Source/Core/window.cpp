@@ -370,7 +370,7 @@ void Window::UpdateRenderTargetViews()
 		ThrowIfFailed(dxgi_swap_chain_->GetBuffer(i, IID_PPV_ARGS(&back_buffer)));
 
 		ResourceStateTracker::AddGlobalResourceState(back_buffer.Get(), D3D12_RESOURCE_STATE_COMMON);
-
+	
 		back_buffer_textures_[i].SetD3D12Resource(back_buffer);
 		back_buffer_textures_[i].CreateViews();
 	}

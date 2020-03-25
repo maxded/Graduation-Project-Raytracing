@@ -132,6 +132,10 @@ private:
 	{
 		DirectX::XMMATRIX InverseViewProj;
 		DirectX::XMVECTOR CamPos;
+		float VFOV;
+		float PixelHeight;
+		float Padding0;
+		float Padding1;
 	};
 
 	SceneConstantBuffer scene_buffer_;

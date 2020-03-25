@@ -20,7 +20,6 @@ using namespace DirectX;
 
 #include <d3dcompiler.h>
 #include <DirectXColors.h>
-
 #include "CompiledShaders/Raytracing.hlsl.h"
 
 const wchar_t* ReflectionsDemo::c_raygen_shader_		= L"RaygenShader";
@@ -40,8 +39,8 @@ struct TonemapParameters
 {
 	TonemapParameters()
 		: TonemapMethod(kTmReinhard)
-		  , Exposure(0.0f)
-		  , MaxLuminance(1.0f)
+		  , Exposure(-1.0f)
+		  , MaxLuminance(255.0f)
 		  , K(1.0f)
 		  , A(0.22f)
 		  , B(0.3f)
@@ -289,7 +288,6 @@ bool ReflectionsDemo::LoadContent()
 			color_clear_value.Color[1] = 0.6f;
 			color_clear_value.Color[2] = 0.9f;
 			color_clear_value.Color[3] = 1.0f;
-			color_clear_value.DepthStencil = { 0.0f, 0 };
 
 			// Create render target texture.
 			Texture hdr_texture = Texture(color_desc, &color_clear_value, TextureUsage::RenderTarget, "Light Accumulation : HDR Texture");
@@ -309,16 +307,16 @@ bool ReflectionsDemo::LoadContent()
 
 	// UAV - raytracing output texture.
 	{
-		DXGI_FORMAT raytracing_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		DXGI_FORMAT raytracing_buffer_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-		//  raytracing output texture. R8G8B8A8_UNORM.
+		//  raytracing output texture. DXGI_FORMAT_R16G16B16A16_FLOAT.
 		{
-			// Create a shadow buffer for the raytracing shadow pass.
+			// Create a raytracing buffer for the raytracing pass.
 			auto raytracing_desc = CD3DX12_RESOURCE_DESC::Tex2D(raytracing_buffer_format, width, height);
 			raytracing_desc.MipLevels = 1;
 			raytracing_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-			// Create shadow buffer render target texture.
+			// Create raytracing buffer render target texture.
 			raytracing_output_texture_ = Texture(raytracing_desc, nullptr, TextureUsage::UAV, "Raytracing output");
 		}
 	}
@@ -395,16 +393,35 @@ bool ReflectionsDemo::LoadContent()
 		root_parameters[RtGlobalRootSignatureParams::Indices].InitAsShaderResourceView(7);
 		root_parameters[RtGlobalRootSignatureParams::GBuffer].InitAsDescriptorTable(1, &srv_descriptor);
 		root_parameters[RtGlobalRootSignatureParams::Textures].InitAsDescriptorTable(1, &textures_descriptor);
-	
-		CD3DX12_STATIC_SAMPLER_DESC point_clamp_sampler(
-			0,
-			D3D12_FILTER_MIN_MAG_MIP_POINT,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
+
+		CD3DX12_STATIC_SAMPLER_DESC static_sampler
+		(
+			0, // shaderRegister
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressU
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, // addressV
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP // addressW
+		);
+
+		
+		D3D12_STATIC_SAMPLER_DESC default_sampler;
+		default_sampler.Filter			= D3D12_FILTER_ANISOTROPIC;
+		default_sampler.AddressU		= D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		default_sampler.AddressV		= D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		default_sampler.AddressW		= D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		default_sampler.MipLODBias		= 0.0f;
+		default_sampler.MaxAnisotropy	= 16;
+		default_sampler.ComparisonFunc	= D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		default_sampler.MinLOD			= 0.0f;
+		default_sampler.MaxLOD			= D3D12_FLOAT32_MAX;
+		default_sampler.MaxAnisotropy	= 8;
+		default_sampler.BorderColor		= D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+		default_sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		default_sampler.ShaderRegister	= 0;
+		default_sampler.RegisterSpace	= 0;
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_description;
-		root_signature_description.Init_1_1(RtGlobalRootSignatureParams::NumRootParameters, root_parameters, 1, &point_clamp_sampler);
+		root_signature_description.Init_1_1(RtGlobalRootSignatureParams::NumRootParameters, root_parameters, 1, &static_sampler);
 
 		raytracing_global_root_signature_.SetRootSignatureDesc(root_signature_description.Desc_1_1, feature_data.HighestVersion);
 	}
@@ -546,7 +563,7 @@ bool ReflectionsDemo::LoadContent()
 		// Shader config
 		// Defines the maximum sizes in bytes for the ray payload and attribute structure.
 		auto shader_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-		UINT payload_size	= 4 * sizeof(float);   // float4 color
+		UINT payload_size	= 7 * sizeof(float);   // float4 color
 		UINT attribute_size = 2 * sizeof(float);  // float2 barycentrics
 		shader_config->Config(payload_size, attribute_size);
 
@@ -566,7 +583,7 @@ bool ReflectionsDemo::LoadContent()
 
 		// Pipeline config
 		auto pipeline_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-		pipeline_config->Config(2); // Max recusion of rays.
+		pipeline_config->Config(3); // Max recusion of rays.
 
 #if _DEBUG
 		PrintStateObjectDesc(raytracing_pipeline);
@@ -932,7 +949,7 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 
 		// Setup the light buffers.
 		point_lights_.resize(num_point_lights);
-		for (int i = 0; i < num_point_lights; ++i)
+		/*for (int i = 0; i < num_point_lights; ++i)
 		{
 			PointLight& l = point_lights_[i];
 
@@ -949,10 +966,10 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 			l.Color = XMFLOAT4(light_colors[i]);
 			l.Intensity = 1.0f;
 			l.Range = 3.0f;
-		}
+		}*/
 
 		spot_lights_.resize(num_spot_lights);
-		for (int i = 0; i < num_spot_lights; ++i)
+		/*for (int i = 0; i < num_spot_lights; ++i)
 		{
 			SpotLight& l = spot_lights_[i];
 
@@ -975,7 +992,7 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 			l.Intensity = 1.0f;
 			l.SpotAngle = XMConvertToRadians(45.0f);
 			l.Attenuation = 0.0f;
-		}
+		}*/
 
 		directional_lights_.resize(num_directional_lights);
 		for (int i = 0; i < num_directional_lights; ++i)
@@ -988,7 +1005,7 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 			XMStoreFloat4(&l.DirectionWS, direction_ws);
 			XMStoreFloat4(&l.DirectionVS, direction_vs);
 
-			l.Color = XMFLOAT4(Colors::White);
+			l.Color = XMFLOAT4(15.0, 15.0, 15.0, 1.0);
 		}
 	}
 
@@ -998,6 +1015,8 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 
 		scene_buffer_.InverseViewProj	= XMMatrixInverse(nullptr, view_proj);
 		scene_buffer_.CamPos			= camera.GetTranslation();
+		scene_buffer_.VFOV				= camera.GetFoV();
+		scene_buffer_.PixelHeight		= height_;
 	}
 
 	// Update viewport constants.

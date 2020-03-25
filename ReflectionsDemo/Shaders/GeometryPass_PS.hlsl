@@ -94,9 +94,8 @@ PixelShaderOutput main(PixelShaderInput IN)
 	MaterialData material = Materials[MaterialCB.MaterialIndex];
 
 	float4 base_color;
+	float2 metal_rough;
 	float3 n;
-	float metallic;
-	float roughness;
 	float3 emissive;
 	float ao;
 
@@ -109,19 +108,17 @@ PixelShaderOutput main(PixelShaderInput IN)
 		base_color = material.BaseColorFactor;
 	}
 
-	float4 metal_rough_sample;
-
 	if (material.MetalRoughIndex >= 0)
 	{
-		metal_rough_sample = Textures[material.MetalRoughIndex].Sample(LinearRepeatSampler, IN.TexCoord);
+		metal_rough = Textures[material.MetalRoughIndex].Sample(LinearRepeatSampler, IN.TexCoord).gb;
 
-		roughness = metal_rough_sample.g *material.RoughnessFactor;
-		metallic = metal_rough_sample.b *material.MetallicFactor;
+		metal_rough.r *= material.RoughnessFactor;
+		metal_rough.g *= material.MetallicFactor;
 	}
 	else
 	{
-		roughness = material.RoughnessFactor;
-		metallic = material.MetallicFactor;
+		metal_rough.r = material.RoughnessFactor;
+		metal_rough.g = material.MetallicFactor;
 	}
 
 //#if HAS_TANGENTS
@@ -157,11 +154,11 @@ PixelShaderOutput main(PixelShaderInput IN)
 	{
 		if (material.OcclusionIndex == material.MetalRoughIndex)
 		{
-			ao = metal_rough_sample.r;
+			ao = Textures[material.MetalRoughIndex].Sample(LinearRepeatSampler, IN.TexCoord).r;
 		}
 		else
 		{
-			ao = Textures[material.OcclusionIndex].Sample(LinearRepeatSampler, IN.TexCoord);
+			//ao = Textures[material.OcclusionIndex].Sample(LinearRepeatSampler, IN.TexCoord).r;
 		}
 	}
 	else
@@ -180,7 +177,7 @@ PixelShaderOutput main(PixelShaderInput IN)
 
 	output.AlbedoBuffer				= base_color;
 	output.NormalBuffer				= float4(n, 1.0);
-	output.MetalRoughBuffer			= float2(metallic, roughness);
+	output.MetalRoughBuffer			= metal_rough;
 	output.EmissiveOcclusionBuffer	= float4(emissive, ao);
 
 	return output;

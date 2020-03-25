@@ -195,11 +195,22 @@ void Texture::CreateViews()
 			render_target_view_ = app.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 			device->CreateRenderTargetView(d3d12_resource_.Get(), nullptr, render_target_view_.GetDescriptorHandle());
 
-			// Set default render pass beginning and ending access.
-			const float clear_color[]{ 0.4f, 0.6f, 0.9f, 1.0f };
-			CD3DX12_CLEAR_VALUE clear_value{ desc.Format, clear_color };
+			D3D12_CLEAR_VALUE clear_value;
 			
-			D3D12_RENDER_PASS_BEGINNING_ACCESS beginning_access { D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR, { clear_value } };
+			if(d3d12_clear_value_)
+			{
+				clear_value = *d3d12_clear_value_;
+			}
+			else
+			{
+				clear_value.Format = desc.Format;
+				clear_value.Color[0] = 0.4f;
+				clear_value.Color[1] = 0.6f;
+				clear_value.Color[2] = 0.0f;
+				clear_value.Color[3] = 1.0f;
+			}
+			
+			D3D12_RENDER_PASS_BEGINNING_ACCESS beginning_access{ D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR, { clear_value } };
 			D3D12_RENDER_PASS_ENDING_ACCESS ending_access{ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE, {} };
 
 			render_pass_beginning_access_ = beginning_access;
