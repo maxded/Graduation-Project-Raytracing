@@ -191,16 +191,16 @@ void Window::OnUpdate(UpdateEventArgs& e)
 	// Wait for the swapchain to finish presenting
 	::WaitForSingleObjectEx(swap_chain_event_, 100, TRUE);
 
-	gui_.NewFrame();
-	
 	update_clock_.Tick();
+
+	gui_.NewFrame();
 
 	if (auto p_game = p_game_.lock())
 	{
 		UpdateEventArgs update_event_args(update_clock_.GetDeltaSeconds(), update_clock_.GetTotalSeconds(),
 		                                  e.FrameNumber);
 		p_game->OnUpdate(update_event_args);
-	}
+	}	
 }
 
 void Window::OnRender(RenderEventArgs& e)

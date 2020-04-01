@@ -57,7 +57,7 @@ bool GUI::Initialize(std::shared_ptr<Window> window)
 	io.FontGlobalScale = window->GetDPIScaling();
 	// Allow user UI scaling using CTRL+Mouse Wheel scrolling
 	io.FontAllowUserScaling = true;
-
+	io.Fonts->Clear();
 	// Build texture atlas
 	unsigned char* pixel_data = nullptr;
 	int width, height;

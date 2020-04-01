@@ -139,6 +139,10 @@
     <ClInclude Include="Include\Utility\key_codes.h" />
     <ClInclude Include="Include\Core\window.h" />
     <ClInclude Include="Include\Utility\neel_engine_pch.h" />
+    <ClInclude Include="Source\ImGui\imgui_internal.h" />
+    <ClInclude Include="Source\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="Source\ImGui\imstb_textedit.h" />
+    <ClInclude Include="Source\ImGui\imstb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\neel_engine.cpp" />
