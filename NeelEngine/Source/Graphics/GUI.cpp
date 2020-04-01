@@ -220,7 +220,7 @@ void GUI::Render(std::shared_ptr<CommandList> command_list, const RenderTarget& 
 	command_list->SetRenderTarget(render_target);
 
 	// Set root arguments.
-//    DirectX::XMMATRIX projectionMatrix = DirectX::XMMatrixOrthographicRH( drawData->DisplaySize.x, drawData->DisplaySize.y, 0.0f, 1.0f );
+	//DirectX::XMMATRIX projectionMatrix = DirectX::XMMatrixOrthographicRH( drawData->DisplaySize.x, drawData->DisplaySize.y, 0.0f, 1.0f );
 	float l = draw_data->DisplayPos.x;
 	float r = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
 	float t = draw_data->DisplayPos.y;

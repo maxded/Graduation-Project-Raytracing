@@ -101,7 +101,7 @@ PixelShaderOutput main(PixelShaderInput IN)
 
 	if (material.BaseColorIndex >= 0)
 	{
-		base_color = Textures[material.BaseColorIndex].Sample(LinearRepeatSampler, IN.TexCoord);// *material.BaseColorFactor;
+		base_color = Textures[material.BaseColorIndex].Sample(LinearRepeatSampler, IN.TexCoord);
 	}
 	else 
 	{
@@ -142,7 +142,7 @@ PixelShaderOutput main(PixelShaderInput IN)
 		float4 normal_map_sample = Textures[material.NormalIndex].Sample(LinearRepeatSampler, IN.TexCoord);
 		normal_map_sample.g = 1.0 - normal_map_sample.g;
 
-		float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * float3(material.NormalScale, material.NormalScale, 1.0);
+		float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * material.NormalScale;
 		n = normalize(mul(normal, TBN));
 	}
 	else 

@@ -3,8 +3,6 @@
 #include "gltf_scene.h"
 #include "camera.h"
 
-#include <DirectXColors.h>
-
 Scene::Scene()
 	: CubeMesh(nullptr)
 	, SphereMesh(nullptr)

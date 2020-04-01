@@ -31,6 +31,8 @@ protected:
 	*/
 	void OnUpdate(UpdateEventArgs& e) override;
 
+	void OnGui();
+
 	/**
 	 *  Render stuff.
 	 */
@@ -97,6 +99,7 @@ private:
 	int height_;
 	// Scale the HDR render target to a fraction of the window size.
 	float render_scale_;
+	int maximum_ray_bounces_ = 6;
 
 	/**
 	* Scene light properties for shaders.
@@ -122,7 +125,6 @@ private:
 	std::vector<DirectionalLight>	directional_lights_;
 	
 	bool animate_lights_;
-	bool visualise_lights_;
 
 	/**
 	* Scene constant data.
@@ -131,10 +133,11 @@ private:
 	struct SceneConstantBuffer
 	{
 		DirectX::XMMATRIX InverseViewProj;
+		DirectX::XMMATRIX ViewProj;
 		DirectX::XMVECTOR CamPos;
 		float VFOV;
 		float PixelHeight;
-		float Padding0;
+		int RayBounces = 2;
 		float Padding1;
 	};
 

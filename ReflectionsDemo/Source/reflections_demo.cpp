@@ -39,8 +39,8 @@ struct TonemapParameters
 {
 	TonemapParameters()
 		: TonemapMethod(kTmReinhard)
-		  , Exposure(-1.0f)
-		  , MaxLuminance(255.0f)
+		  , Exposure(0.0f)
+		  , MaxLuminance(1.0f)
 		  , K(1.0f)
 		  , A(0.22f)
 		  , B(0.3f)
@@ -114,8 +114,7 @@ ReflectionsDemo::ReflectionsDemo(const std::wstring& name, int width, int height
 	, height_(height)
 	, render_scale_(1.0f)
 	, scissor_rect_(CD3DX12_RECT(0, 0, LONG_MAX, LONG_MAX))
-	, animate_lights_(false)
-	, visualise_lights_(true)
+	, animate_lights_(true)
 {
 	// Create camera.
 	Camera::Create();
@@ -563,7 +562,7 @@ bool ReflectionsDemo::LoadContent()
 		// Shader config
 		// Defines the maximum sizes in bytes for the ray payload and attribute structure.
 		auto shader_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-		UINT payload_size	= 7 * sizeof(float);   // float4 color
+		UINT payload_size	= 3 * sizeof(float);   // float4 color
 		UINT attribute_size = 2 * sizeof(float);  // float2 barycentrics
 		shader_config->Config(payload_size, attribute_size);
 
@@ -583,7 +582,7 @@ bool ReflectionsDemo::LoadContent()
 
 		// Pipeline config
 		auto pipeline_config = raytracing_pipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-		pipeline_config->Config(3); // Max recusion of rays.
+		pipeline_config->Config(6); // Max recusion of rays.
 
 #if _DEBUG
 		PrintStateObjectDesc(raytracing_pipeline);
@@ -922,13 +921,33 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 	}
 
 	Camera& camera = Camera::Get();
-
 	XMMATRIX view_matrix = camera.GetViewMatrix();
 
+
+	static float animation_time = 0.0f;
+	static bool reverse = false;
+	if (animate_lights_)
+	{
+		if (!reverse)
+			animation_time += static_cast<float>(e.ElapsedTime) * 0.04f * XM_PI;
+		else
+			animation_time -= static_cast<float>(e.ElapsedTime) * 0.04f * XM_PI;
+		
+		if (animation_time >= 1.0f)
+			reverse = true;
+		else if (animation_time <= 0.0f)
+			reverse = false;
+	}
+	
+	XMVECTOR sun_focus{ 0.0f, 0.0f, 0.0f, 0.0f };
+	XMVECTOR sun_start_position{ 20.0f, 40.0f, 10.0f, 1.0f };
+	XMVECTOR sun_end_position{ -20.0f, 40.0f, -10.0f, 1.0f };
+
+	XMVECTOR sun_current_position = XMVectorLerp(sun_start_position, sun_end_position, animation_time);
+	XMVECTOR sun_current_direction = sun_current_position - sun_focus;
+	
 	// Update lights.
 	{
-		const int num_point_lights = 12;
-		const int num_spot_lights = 4;
 		const int num_directional_lights = 1;
 
 		static const XMVECTORF32 light_colors[] =
@@ -937,75 +956,17 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 			Colors::Aqua, Colors::CadetBlue, Colors::GreenYellow, Colors::Lime, Colors::Azure
 		};
 
-		static float light_anim_time = 0.0f;
-		if (animate_lights_)
-		{
-			light_anim_time += static_cast<float>(e.ElapsedTime) * 0.1f * XM_PI;
-		}
-
-		const float radius = 3.5f;
-		const float offset = 2.0f * XM_PI / num_point_lights;
-		const float offset2 = offset + (offset / 2.0f);
-
-		// Setup the light buffers.
-		point_lights_.resize(num_point_lights);
-		/*for (int i = 0; i < num_point_lights; ++i)
-		{
-			PointLight& l = point_lights_[i];
-
-			l.PositionWS = {
-				static_cast<float>(std::sin(light_anim_time + offset * i)) * radius,
-				2.0f,
-				static_cast<float>(std::cos(light_anim_time + offset * i)) * radius,
-				1.0f
-			};
-			XMVECTOR position_ws = XMLoadFloat4(&l.PositionWS);
-			XMVECTOR position_vs = XMVector3TransformCoord(position_ws, view_matrix);
-			XMStoreFloat4(&l.PositionVS, position_vs);
-
-			l.Color = XMFLOAT4(light_colors[i]);
-			l.Intensity = 1.0f;
-			l.Range = 3.0f;
-		}*/
-
-		spot_lights_.resize(num_spot_lights);
-		/*for (int i = 0; i < num_spot_lights; ++i)
-		{
-			SpotLight& l = spot_lights_[i];
-
-			l.PositionWS = {
-				static_cast<float>(std::sin(light_anim_time + offset * i + offset2)) * radius,
-				9.0f,
-				static_cast<float>(std::cos(light_anim_time + offset * i + offset2)) * radius,
-				1.0f
-			};
-			XMVECTOR position_ws = XMLoadFloat4(&l.PositionWS);
-			XMVECTOR position_vs = XMVector3TransformCoord(position_ws, view_matrix);
-			XMStoreFloat4(&l.PositionVS, position_vs);
-
-			XMVECTOR direction_ws = XMVector3Normalize(XMVectorSetW(XMVectorNegate(position_ws), 0));
-			XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
-			XMStoreFloat4(&l.DirectionWS, direction_ws);
-			XMStoreFloat4(&l.DirectionVS, direction_vs);
-
-			l.Color = XMFLOAT4(light_colors[num_point_lights + i]);
-			l.Intensity = 1.0f;
-			l.SpotAngle = XMConvertToRadians(45.0f);
-			l.Attenuation = 0.0f;
-		}*/
-
+		// Setup the light buffer.
 		directional_lights_.resize(num_directional_lights);
 		for (int i = 0; i < num_directional_lights; ++i)
 		{
 			DirectionalLight& l = directional_lights_[i];
 
-			XMVECTOR direction_ws = { -0.16f, 0.86f, 0.12f, 0.0 };
+			XMVECTOR direction_ws = sun_current_direction;
 			XMVECTOR direction_vs = XMVector3Normalize(XMVector3TransformNormal(direction_ws, view_matrix));
 
 			XMStoreFloat4(&l.DirectionWS, direction_ws);
 			XMStoreFloat4(&l.DirectionVS, direction_vs);
-
-			l.Color = XMFLOAT4(15.0, 15.0, 15.0, 1.0);
 		}
 	}
 
@@ -1014,6 +975,7 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 		XMMATRIX view_proj = camera.GetViewMatrix() * camera.GetProjectionMatrix();
 
 		scene_buffer_.InverseViewProj	= XMMatrixInverse(nullptr, view_proj);
+		scene_buffer_.ViewProj			= view_proj;
 		scene_buffer_.CamPos			= camera.GetTranslation();
 		scene_buffer_.VFOV				= camera.GetFoV();
 		scene_buffer_.PixelHeight		= height_;
@@ -1021,8 +983,101 @@ void ReflectionsDemo::OnUpdate(UpdateEventArgs& e)
 
 	// Update viewport constants.
 	g_output_mode.NearPlane = camera.GetNearClip();
-	g_output_mode.FarPlane  = camera.GetFarClip();	
+	g_output_mode.FarPlane  = camera.GetFarClip();
 
+	OnGui();
+}
+
+void ReflectionsDemo::OnGui()
+{
+	static bool show_options = true;
+	
+	if (ImGui::BeginMainMenuBar())
+	{
+		if (ImGui::BeginMenu("Menu"))
+		{
+			bool v_sync = p_window_->IsVSync();
+			
+			ImGui::MenuItem("Options", nullptr, &show_options);
+
+			if (ImGui::MenuItem("V-Sync", "V", &v_sync))
+				p_window_->SetVSync(v_sync);
+			if (ImGui::MenuItem("Exit", "Esc"))
+				NeelEngine::Get().Quit();		
+
+			ImGui::EndMenu();
+		}
+
+		char buffer[256];
+		{
+			sprintf_s(buffer, _countof(buffer), "FPS: %.2f (%.2f ms)  ", g_fps, 1.0 / g_fps * 1000.0);
+			auto fps_text_size = ImGui::CalcTextSize(buffer);
+			ImGui::SameLine(ImGui::GetWindowWidth() - fps_text_size.x);
+			ImGui::Text(buffer);
+		}
+		
+		ImGui::EndMainMenuBar();
+	}
+
+	if(show_options)
+	{
+		ImGui::Begin("Options");
+		{
+			static float sun_color[3]{ 15.0, 15.0, 15.0 };
+
+			
+			ImGui::TextWrapped("Use the options menu to set numerous graphical variables.");
+			ImGui::NewLine();
+			
+			ImGui::SliderInt("Ray Bounces", &scene_buffer_.RayBounces, 1, maximum_ray_bounces_);
+			ImGui::NewLine();
+			
+			ImGui::ColorPicker3("Sun Color", sun_color);
+			XMStoreFloat4(&directional_lights_[0].Color, { sun_color[0], sun_color[1], sun_color[2], 1.0f });
+
+			const char* toneMappingMethods[] = {
+				"Linear",
+				"Reinhard",
+				"Reinhard Squared",
+				"ACES Filmic"
+			};
+
+			ImGui::NewLine();
+			ImGui::Combo("Tonemapping Methods", (int*)(&g_tonemap_parameters.TonemapMethod), toneMappingMethods, 4);
+
+			switch (g_tonemap_parameters.TonemapMethod)
+			{
+			case TonemapMethod::kTmLinear:
+				ImGui::SliderFloat("Max Brightness", &g_tonemap_parameters.MaxLuminance, 1.0f, 12.0f);
+				break;
+			case TonemapMethod::kTmReinhard:
+				ImGui::SliderFloat("Reinhard Constant", &g_tonemap_parameters.K, 0.01f, 10.0f);
+				break;
+			case TonemapMethod::kTmReinhardSq:
+				ImGui::SliderFloat("Reinhard Constant", &g_tonemap_parameters.K, 0.01f, 10.0f);
+				break;
+			case TonemapMethod::kTmAcesFilmic:
+				ImGui::SliderFloat("Shoulder Strength", &g_tonemap_parameters.A, 0.01f, 5.0f);
+				ImGui::SliderFloat("Linear Strength", &g_tonemap_parameters.B, 0.0f, 100.0f);
+				ImGui::SliderFloat("Linear Angle", &g_tonemap_parameters.C, 0.0f, 1.0f);
+				ImGui::SliderFloat("Toe Strength", &g_tonemap_parameters.D, 0.01f, 1.0f);
+				ImGui::SliderFloat("Toe Numerator", &g_tonemap_parameters.E, 0.0f, 10.0f);
+				ImGui::SliderFloat("Toe Denominator", &g_tonemap_parameters.F, 1.0f, 10.0f);
+				ImGui::SliderFloat("Linear White", &g_tonemap_parameters.LinearWhite, 1.0f, 120.0f);
+				break;
+			default:
+				break;
+			}
+
+			if (ImGui::Button("Reset to Defaults"))
+			{
+				TonemapMethod method = g_tonemap_parameters.TonemapMethod;
+				g_tonemap_parameters = TonemapParameters();
+				g_tonemap_parameters.TonemapMethod = method;
+			}
+			
+		}ImGui::End();	
+	}
 }
 
 void ReflectionsDemo::OnRender(RenderEventArgs& e)
@@ -1056,35 +1111,6 @@ void ReflectionsDemo::OnRender(RenderEventArgs& e)
 			mesh.SetBaseTransform(instance.Transform);
 			mesh.Render(*command_list);
 		}
-
-#if DEBUG_
-		// Render light sources.
-		//if (visualise_lights_ && scene_.BasicGeometryLoaded())
-		//{
-		//	DirectX::XMMATRIX translation_matrix	= DirectX::XMMatrixIdentity();
-		//	DirectX::XMMATRIX rotation_matrix		= DirectX::XMMatrixIdentity();
-		//	DirectX::XMMATRIX scaling_matrix		= DirectX::XMMatrixIdentity();
-
-		//	DirectX::XMMATRIX world_matrix = DirectX::XMMatrixIdentity();
-
-		//	// Render geometry for point light sources
-		//	for (const auto& l : point_lights_)
-		//	{
-		//		DirectX::XMVECTOR light_position = DirectX::XMLoadFloat4(&l.PositionWS);
-		//		DirectX::XMVECTOR light_scaling{ 0.1f, 0.1f, 0.1f };
-
-		//		translation_matrix	= DirectX::XMMatrixTranslationFromVector(light_position);
-		//		scaling_matrix		= DirectX::XMMatrixScalingFromVector(light_scaling);
-
-		//		world_matrix = scaling_matrix * rotation_matrix * translation_matrix;
-
-		//		scene_.SphereMesh->SetEmissive(DirectX::XMFLOAT3(l.Color.x, l.Color.y, l.Color.z));
-
-		//		scene_.SphereMesh->SetWorldMatrix(world_matrix);
-		//		scene_.SphereMesh->Render(render_context);
-		//	}
-		//}
-#endif	
 		command_list->EndRenderPass();
 	}
 
@@ -1235,9 +1261,6 @@ void ReflectionsDemo::OnKeyPressed(KeyEventArgs& e)
 			break;	
 		case KeyCode::ShiftKey:
 			shift_ = true;
-			break;
-		case KeyCode::L:
-			visualise_lights_ = !visualise_lights_;
 			break;
 		case KeyCode::D1:
 			current_display_texture_ = &light_accumulation_pass_render_target_.GetTexture(AttachmentPoint::kColor0);

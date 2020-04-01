@@ -84,8 +84,7 @@ struct RayPayload
 {
 	bool SkipShading;
 	float RayHitT;
-	float3 Color;
-	RayCone Cone;
+	int Bounce;
 };
 
 
@@ -107,14 +106,6 @@ void GenerateCameraRay(uint2 index, out float3 origin, out float3 direction)
 	origin = g_SceneData.CameraPosition.xyz;
 	direction = normalize(world - origin);
 } 
-
-RayCone Propagate(RayCone cone, float SurfaceSpreadAngle, float hitT)
-{
-	RayCone newcone;
-	newcone.Width		= cone.SpreadAngle * hitT + cone.Width;
-	newcone.SpreadAngle = cone.SpreadAngle + SurfaceSpreadAngle;
-	return newcone;
-}
 
 uint3 Load3x16BitIndices(uint offsetBytes)
 {
@@ -138,13 +129,6 @@ uint3 Load3x16BitIndices(uint offsetBytes)
 	}
 
 	return indices;
-}
-
-void FSchlick(inout float3 specular, inout float3 diffuse, float3 lightDir, float3 halfVec)
-{
-	float fresnel = pow(1.0 - saturate(dot(lightDir, halfVec)), 5.0);
-	specular = lerp(specular, 1, fresnel);
-	diffuse = lerp(diffuse, 0, fresnel);
 }
 
 //=============================================================================
@@ -178,9 +162,6 @@ void RaygenShader()
 
 	//============================== RayCone test ===================================\\
 
-	//float3 origin;
-	//float3 direction;
-
 	//GenerateCameraRay(launchindex, origin, direction);
 	//
 	//RayCone cone;
@@ -191,8 +172,6 @@ void RaygenShader()
 	//RayPayload testpayload;
 	//testpayload.SkipShading = false;
 	//testpayload.RayHitT		= FLT_MAX;
-	//testpayload.Color		= 0.0;
-	//testpayload.Cone		= cone;
 
 	//// Prepare a test ray.
 	//RayDesc testray;
@@ -203,16 +182,12 @@ void RaygenShader()
 
 	//TraceRay(g_Accel, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, testray, testpayload);
 
-	//g_RenderTarget[launchindex].xyz = testpayload.Color;
-
-
 	//======================= Check if point is in shadows ===================================\\
 
 	// Initialize the shadow payload.
 	RayPayload shadowpayload;
 	shadowpayload.SkipShading = true;
 	shadowpayload.RayHitT = FLT_MAX;
-	shadowpayload.Color = 0.0;
 
 	// Prepare a shadow ray.
 	RayDesc shadowray;
@@ -221,20 +196,24 @@ void RaygenShader()
 	shadowray.TMin		= 0.01;
 	shadowray.TMax		= FLT_MAX;
 
-	// Lauch a shadow ray.
+	g_RenderTarget[launchindex] = float4(0.0,0.0,0.0,1.0);
+
+	// Lauch a shadow ray for primary visibility check.
 	TraceRay(g_Accel, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 0, 0, shadowray, shadowpayload);
 	if (shadowpayload.RayHitT < FLT_MAX)
 	{
-		g_RenderTarget[launchindex] = float4(0.0, 0.0, 0.0, 0.0);
-		return;
+		g_RenderTarget[launchindex].w = 0.0;
 	}
-	else
-	{
-		g_RenderTarget[launchindex].w = 1.0;
-	}
-		
+	
 	//======================= If not in shadows, do reflection ===============================\\
 
+	// Is reflection?
+	if (!metal_rough_sample.r < 0.3)
+	{
+		g_RenderTarget[launchindex].rgb = 0.0;
+		return;
+	}
+		
 	float3 viewdir			= normalize(world - g_SceneData.CameraPosition.xyz);
 	float3 reflectiondir	= reflect(viewdir, normal_sample.xyz);
 
@@ -242,7 +221,7 @@ void RaygenShader()
 	RayPayload reflectionpayload;
 	reflectionpayload.SkipShading = false;
 	reflectionpayload.RayHitT = FLT_MAX;
-	reflectionpayload.Color = 0.0;
+	reflectionpayload.Bounce = 0;
 
 	// Prepare a reflection ray.
 	RayDesc reflectionray;
@@ -253,17 +232,13 @@ void RaygenShader()
 
 	// Lauch a ray.
 	TraceRay(g_Accel, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, reflectionray, reflectionpayload);
-
-	float perceptual_roughness = clamp(metal_rough_sample.r, 0.04, 1.0);
-	float roughnessfactor = RoughnessContribution(perceptual_roughness, 0.3, 10.0);
-
-	g_RenderTarget[launchindex].xyz = reflectionpayload.Color * roughnessfactor;
 }
 
 
 [shader("closesthit")]
 void ClosesthitShader(inout RayPayload payload, in MyAttributes attr)
 {
+	payload.Bounce++;
 	payload.RayHitT = RayTCurrent();
 	if (payload.SkipShading)
 	{
@@ -288,46 +263,34 @@ void ClosesthitShader(inout RayPayload payload, in MyAttributes attr)
 	const float3 normal0 = asfloat(g_Attributes.Load3(info.NormalAttributeOffset + ii.x * info.NormalStride));
 	const float3 normal1 = asfloat(g_Attributes.Load3(info.NormalAttributeOffset + ii.y * info.NormalStride));
 	const float3 normal2 = asfloat(g_Attributes.Load3(info.NormalAttributeOffset + ii.z * info.NormalStride));
-	float3 wsNormal = normalize(normal0 * bary.x + normal1 * bary.y + normal2 * bary.z);
+
+	// Blender export uses +z as up.
+	const float3 correctnormal0 = float3(normal0.x, -normal0.z, normal0.y);
+	const float3 correctnormal1 = float3(normal1.x, -normal1.z, normal1.y);
+	const float3 correctnormal2 = float3(normal2.x, -normal2.z, normal2.y);
+
+	float3 wsNormal = normalize(correctnormal0 * bary.x + correctnormal1 * bary.y + correctnormal2 * bary.z);
 
 	// Calculate tangent.
 	const float4 tangent0 = asfloat(g_Attributes.Load4(info.TangentAttributeOffset + ii.x * info.TangentStride));
 	const float4 tangent1 = asfloat(g_Attributes.Load4(info.TangentAttributeOffset + ii.y * info.TangentStride));
 	const float4 tangent2 = asfloat(g_Attributes.Load4(info.TangentAttributeOffset + ii.z * info.TangentStride));
-	float4 wsTangent = normalize(tangent0 * bary.x + tangent1 * bary.y + tangent2 * bary.z);
+
+	const float4 correcttangent0 = float4(tangent0.x, -tangent0.z, tangent0.y, tangent0.w);
+	const float4 correcttangent1 = float4(tangent1.x, -tangent1.z, tangent1.y, tangent1.w);
+	const float4 correcttangent2 = float4(tangent2.x, -tangent2.z, tangent2.y, tangent2.w);
+
+	float4 wsTangent = normalize(correcttangent0 * bary.x + correcttangent1 * bary.y + correcttangent2 * bary.z);
 
 	// Calculate bitangent.
 	float3 wsBitangent = normalize(cross(wsNormal, wsTangent.xyz)) * wsTangent.w;
 
-	// Get positions for uv partial derivatives.
-	const float3 p0 = asfloat(g_Attributes.Load3(info.PositionAttributeOffset + ii.x * info.PositionStride));
-	const float3 p1 = asfloat(g_Attributes.Load3(info.PositionAttributeOffset + ii.y * info.PositionStride));
-	const float3 p2 = asfloat(g_Attributes.Load3(info.PositionAttributeOffset + ii.z * info.PositionStride));
-
 	float3 worldPosition  = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
-	float3 triangleNormal = normalize(cross(p2 - p0, p1 - p0));
-
-
-
 
 	//============================== Material Sampling ===================================\\
 
 	uint materialid = info.MaterialId;
 	MaterialData material = g_Materials[materialid];
-
-	// Calculate texture level of detail.
-	payload.Cone = Propagate(payload.Cone, 0, payload.RayHitT);
-
-	//float width, height;
-
-	//g_Textures[material.BaseColorIndex].GetDimensions(width, height);
-
-	//float t_a = width * height * abs((uv1.x - uv0.x) * (uv2.y - uv0.y) - (uv2.x - uv0.x) * (uv1.y - uv0.y));
-	//float p_a = length((p1 - p0) * (p2 - p0));
-	//float lambda = 0.5 * log2(t_a / p_a);
-	//lambda += log2(abs(payload.Cone.Width));
-	//lambda += 0.5 * log2(width * height);
-	//lambda -= log2(abs(dot(normalize(WorldRayDirection()), triangleNormal)));
 
 	float3 diffuse_sample = g_Textures[material.BaseColorIndex].SampleLevel(DefaultSampler, uv, 0).rgb;
 
@@ -340,7 +303,7 @@ void ClosesthitShader(inout RayPayload payload, in MyAttributes attr)
 	float3 normal_map_sample = g_Textures[material.NormalIndex].SampleLevel(DefaultSampler, uv, 0).rgb;
 	normal_map_sample.g = 1.0 - normal_map_sample.g;
 
-	float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * float3(material.NormalScale, material.NormalScale, 1.0);
+	float3 normal = (2.0 * normal_map_sample.rgb - 1.0) * material.NormalScale;
 	float3 world_normal = normalize(mul(normal, TBN));
 
 	//============================== Lighting ===================================\\
@@ -351,7 +314,6 @@ void ClosesthitShader(inout RayPayload payload, in MyAttributes attr)
 		RayPayload shadowpayload;
 		shadowpayload.SkipShading = true;
 		shadowpayload.RayHitT = FLT_MAX;
-		shadowpayload.Color = 0.0;
 
 		float3 rayorigin = OffsetRay(worldPosition, world_normal);
 
@@ -370,40 +332,59 @@ void ClosesthitShader(inout RayPayload payload, in MyAttributes attr)
 		}
 	}	
 
-	float3 N = world_normal;
-	float3 V = normalize(-WorldRayDirection());
-	float3 L = normalize(g_DirectionalLights[0].DirectionWS.xyz);		
-	float3 H = normalize(V + L);
+	if (!metal_rough_sample.x < 0.1)
+	{
+		float3 N = world_normal;
+		float3 V = normalize(-WorldRayDirection());
+		float3 L = normalize(g_DirectionalLights[0].DirectionWS.xyz);
+		float3 H = normalize(V + L);
 
-	float3 radiance = g_DirectionalLights[0].Color.rgb;
+		float3 radiance = g_DirectionalLights[0].Color.rgb;
 
-	float perceptual_roughness = clamp(metal_rough_sample.x, 0.04, 1.0);
-	float metallic = clamp(metal_rough_sample.y, 0.0, 1.0);
+		float perceptual_roughness = clamp(metal_rough_sample.x, 0.04, 1.0);
+		float metallic = clamp(metal_rough_sample.y, 0.0, 1.0);
 
-	float3 f0 = 0.04;
-	float3 specular_color = lerp(f0, diffuse_sample, metallic);
+		float3 f0 = 0.04;
+		float3 specular_color = lerp(f0, diffuse_sample, metallic);
 
-	// Cook-Torrence BRDF.
-	float NDF	= DistributionGGX(N, H, perceptual_roughness);
-	float G		= GeometrySmith(N, V, L, perceptual_roughness);
-	float3 F	= fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), specular_color);
+		// Cook-Torrence BRDF.
+		float NDF = DistributionGGX(N, H, perceptual_roughness);
+		float G = GeometrySmith(N, V, L, perceptual_roughness);
+		float3 F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), specular_color);
 
-	float3 kS = F;
-	float3 kD = float3(1.0, 1.0, 1.0) - kS;
-	kD *= 1.0 - metallic;
+		float3 kS = F;
+		float3 kD = float3(1.0, 1.0, 1.0) - kS;
+		kD *= 1.0 - metallic;
 
-	float3 numerator	= NDF * G * F;
-	float denominator	= 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-	float3 specular		= numerator / max(denominator, 0.001);
+		float3 numerator = NDF * G * F;
+		float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+		float3 specular = numerator / max(denominator, 0.001);
 
-	// add to outgoing radiance Lo.
-	float NdotL = max(dot(N, L), 0.0);
-	float3 Lo = (1.0 * diffuse_sample / M_PI + specular) * radiance * NdotL;
+		// add to outgoing radiance Lo.
+		float NdotL = max(dot(N, L), 0.0);
+		float3 Lo = (1.0 * diffuse_sample / M_PI + specular) * radiance * NdotL;
 
-	float3 ambient = float3(0.03, 0.03, 0.03) * diffuse_sample;
-	float3 outcolor = ambient + (Lo * shadow);
+		float3 ambient = float3(0.03, 0.03, 0.03) * diffuse_sample;
+		float3 outcolor = ambient + (Lo * shadow);
 
-	payload.Color = outcolor;
+		g_RenderTarget[DispatchRaysIndex().xy].xyz = outcolor;
+	}
+
+	// Is reflection? Recursion.
+	if (metal_rough_sample.x < 0.1 && payload.Bounce < g_SceneData.RayBounces)
+	{
+		float3 rayorigin = OffsetRay(worldPosition, world_normal);
+		float3 reflectiondir = reflect(WorldRayDirection(), world_normal);
+
+		// Prepare a reflection ray.
+		RayDesc reflectionray;
+		reflectionray.Origin	= rayorigin;
+		reflectionray.Direction = normalize(reflectiondir);
+		reflectionray.TMin = 0.01;
+		reflectionray.TMax = FLT_MAX;
+
+		TraceRay(g_Accel, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, reflectionray, payload);
+	}
 }
 
 [shader("miss")]
@@ -411,11 +392,11 @@ void MissShader(inout RayPayload payload)
 {
 	if (payload.SkipShading)
 	{
-		g_RenderTarget[DispatchRaysIndex().xy].w = 1.0;
+		//g_RenderTarget[DispatchRaysIndex().xy].w = 1.0;
 	}
 	else
 	{
-		g_RenderTarget[DispatchRaysIndex().xy].xyz = float3(0.0, 0.0, 0.0);
+		g_RenderTarget[DispatchRaysIndex().xy].xyz = 0.0;
 	}
 }
 

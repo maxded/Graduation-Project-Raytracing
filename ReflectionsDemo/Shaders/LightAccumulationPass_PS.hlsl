@@ -30,6 +30,7 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 	float  depth_sample				 = g_GBuffer[4].SampleLevel(PointClampSampler, TexCoord, 0).r;
 	float4 raytraced_sample			 = g_GBuffer[5].SampleLevel(PointClampSampler, TexCoord, 0);
 
+	// Hack.
 	if (depth_sample == 1.0)
 		return float4(0.4, 0.6, 0.9, 1.0);
 
@@ -51,7 +52,7 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 
 	//=================================== Lighting ========================================\\
 
-	float3 V = normalize(g_SceneDataCB.CameraPosition.xyz - world_space_position.xyz);	
+	float3 V = normalize(g_SceneDataCB.CameraPosition.xyz - world_space_position.xyz );
 	float3 N = normal_sample.xyz;
 	float3 L = normalize(g_DirectionalLights[0].DirectionWS.rgb);	// Vector from surface point to light
 	float3 H = normalize(V + L);									// Half vector between both l and v
@@ -72,18 +73,15 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 	float3 specular		= nominator / denominator;
 
 	// add to outgoing radiance Lo
-	float NdotL = max(dot(N, L), 0.0);
+	float NdotL = max(dot(N, L),0.0);
 	float3 Lo = (kD * albedo_sample.rgb / M_PI + specular) * radiance * NdotL;
 
 	float3 ambient = float3(0.03, 0.03, 0.03) * albedo_sample.rgb;
 	float3 color = ambient + Lo * raytraced_sample.a;
 
 	color += raytraced_sample.rgb;
-
 	//color = lerp(color, color * ao, Material.AoStrength);
 	color += emissive_occlusion_sample.rgb;
-
-	float3 test = (kD * albedo_sample.rgb / M_PI + specular) * radiance * NdotL;
 
 	return float4(color, albedo_sample.a);
 }

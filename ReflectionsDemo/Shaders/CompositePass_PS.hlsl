@@ -145,13 +145,13 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 		output = texture_sample;
 		break;
 	case TM_Normal:
-		output = float4(texture_sample.rgb, 1.0);
+		output = texture_sample;
 		break;
 	case TM_Metal:
-		output = float4(texture_sample.r, texture_sample.r, texture_sample.r, 1.0);
+		output = float4(texture_sample.g, texture_sample.g, texture_sample.g, 1.0);
 		break;
 	case TM_Roughness:
-		output = float4(texture_sample.g, texture_sample.g, texture_sample.g, 1.0);
+		output = float4(texture_sample.r, texture_sample.r, texture_sample.r, 1.0);
 		break;
 	case TM_Emissive:
 		output = float4(texture_sample.rgb, 1.0);
@@ -166,7 +166,7 @@ float4 main(float2 TexCoord : TEXCOORD) : SV_Target0
 		output = float4(texture_sample.w, texture_sample.w, texture_sample.w, 1.0);
 		break;
 	case TM_Reflections:
-		output = texture_sample;
+		output = DoHDR(texture_sample);
 		break;
 	}
 
